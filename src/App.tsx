@@ -47,63 +47,21 @@ function App() {
                 <Route path="/register" element={<Register />} />
 
                 {/* Protected routes (auth required) */}
-                <Route element={<Layout />}>
-                  <Route
-                    path="/home"
-                    element={
-                      <ProtectedRoute>
-                        <Home />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/music"
-                    element={
-                      <ProtectedRoute>
-                        <MusicPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/podcasts"
-                    element={
-                      <ProtectedRoute>
-                        <Podcasts />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/search"
-                    element={
-                      <ProtectedRoute>
-                        <Search />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/playlists"
-                    element={
-                      <ProtectedRoute>
-                        <Playlists />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/favorites"
-                    element={
-                      <ProtectedRoute>
-                        <Favorites />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
+                {/* Protected routes (auth required) */}
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <Layout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/music" element={<MusicPage />} />
+                  <Route path="/podcasts" element={<Podcasts />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/playlists" element={<Playlists />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/profile" element={<Profile />} />
 
                   {/* Admin only route */}
                   <Route

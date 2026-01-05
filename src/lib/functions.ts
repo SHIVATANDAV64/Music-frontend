@@ -62,10 +62,13 @@ export async function callFunction<T>(
                 return { success: false, error: 'Failed to parse function response' };
             }
         } else if (execution.status === 'failed') {
+            console.error(`[Functions] Execution failed for ${functionId}:`, execution);
             return {
                 success: false,
                 error: execution.errors || 'Function execution failed'
             };
+        } else {
+            console.error(`[Functions] Unexpected status for ${functionId}:`, execution.status, execution);
         }
 
         return { success: false, error: `Unexpected status: ${execution.status}` };
