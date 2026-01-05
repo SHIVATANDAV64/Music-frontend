@@ -1,0 +1,418 @@
+/**
+ * SoundWave - Organic Design System
+ * 
+ * Philosophy: Sound is order we cannot see. Design reveals the invisible.
+ * 
+ * PRINCIPLES:
+ * 1. Resonance, Not Distraction - ripples on water, grass swaying
+ * 2. Sacred Proportion - Fibonacci (8, 13, 21, 34, 55), Golden Ratio (1.618)
+ * 3. Acoustic Color - colors respond to music mood
+ * 4. The Space Between - generous whitespace is silence
+ * 5. Material Honesty - no gratuitous gradients
+ * 
+ * COLOR PALETTE: Forest at dusk, golden light filtering through trees
+ */
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+/* ==========================================================================
+   DESIGN TOKENS
+   ========================================================================== */
+
+:root {
+  /* ─────────────────────────────────────────────────────────────────────────
+     FIBONACCI SPACING
+     ───────────────────────────────────────────────────────────────────────── */
+  --space-3: 3px;
+  --space-5: 5px;
+  --space-8: 8px;
+  --space-13: 13px;
+  --space-21: 21px;
+  --space-34: 34px;
+  --space-55: 55px;
+  --space-89: 89px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     GOLDEN RATIO TYPOGRAPHY (Base 16px, φ = 1.618)
+     ───────────────────────────────────────────────────────────────────────── */
+  --text-xs: 0.618rem;
+  /* ~10px */
+  --text-sm: 0.875rem;
+  /* 14px */
+  --text-base: 1rem;
+  /* 16px */
+  --text-lg: 1.125rem;
+  /* 18px */
+  --text-xl: 1.618rem;
+  /* ~26px - φ */
+  --text-2xl: 2.618rem;
+  /* ~42px - φ² */
+  --text-3xl: 4.236rem;
+  /* ~68px - φ³ */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SACRED PROPORTION - Layout
+     Sidebar : Content = 1 : 1.618 (Golden Ratio)
+     ───────────────────────────────────────────────────────────────────────── */
+  --sidebar-width: 280px;
+  --golden-ratio: 1.618;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     COLOR PALETTE - Forest at Dusk
+     "Standing in a forest clearing at dusk, golden light filtering through trees"
+     ───────────────────────────────────────────────────────────────────────── */
+
+  /* Foundation - Night Sky */
+  --bg-deep: #0a0a0a;
+  --bg-card: #111111;
+  --bg-elevated: #161616;
+  --bg-hover: #1a1a1a;
+
+  /* Primary - Sunlight Through Leaves (Interactive, alive) */
+  --gold: #c9a962;
+  --gold-light: #e4d5a8;
+  --gold-muted: rgba(201, 169, 98, 0.15);
+  --gold-glow: rgba(201, 169, 98, 0.25);
+
+  /* Secondary - Autumn Earth (Accent depth) */
+  --amber: #8b6914;
+
+  /* Tertiary - Forest Undergrowth (Optional secondary) */
+  --sage: #4a5e4a;
+  --sage-muted: rgba(74, 94, 74, 0.2);
+
+  /* Text - Moonlight */
+  --text-primary: #fafaf5;
+  --text-secondary: #8a8a85;
+  --text-muted: #555550;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     ACOUSTIC COLORS - For visualizer mood response
+     Calm/Ambient → blue-grey
+     Energetic → warm gold
+     Melancholy → muted purple
+     ───────────────────────────────────────────────────────────────────────── */
+  --mood-calm: #3d4f5f;
+  --mood-energy: #c9a962;
+  --mood-melancholy: #5a4a5e;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     TYPOGRAPHY
+     ───────────────────────────────────────────────────────────────────────── */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SHADOWS - Depth like forest layers (Material Honesty)
+     ───────────────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --shadow-gold: 0 0 32px var(--gold-glow);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     MOTION - Organic, like nature
+     ───────────────────────────────────────────────────────────────────────── */
+  --ease-organic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-breath: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-quick: 150ms;
+  --duration-natural: 300ms;
+  --duration-slow: 500ms;
+  --duration-breath: 2000ms;
+}
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.618;
+  /* Golden ratio line height */
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Headings - Serif for warmth */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: var(--text-3xl);
+}
+
+h2 {
+  font-size: var(--text-2xl);
+}
+
+h3 {
+  font-size: var(--text-xl);
+}
+
+h4 {
+  font-size: var(--text-lg);
+}
+
+/* ==========================================================================
+   GRAIN OVERLAY - Texture for tactile feel (Material Honesty)
+   ========================================================================== */
+
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9998;
+  mix-blend-mode: overlay;
+}
+
+/* ==========================================================================
+   LAYOUT - Sacred Proportions
+   ========================================================================== */
+
+/* ==========================================================================
+   LAYOUT - Sacred Proportions
+   ========================================================================== */
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  padding-top: calc(64px + var(--space-34)); /* Navbar height (64px) + spacing */
+  padding-left: var(--space-34);
+  padding-right: var(--space-34);
+  padding-bottom: 240px; /* Accounts for player height ~200px + extra spacing */
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding-top: calc(64px + var(--space-21));
+    padding-left: var(--space-21);
+    padding-right: var(--space-21);
+    padding-bottom: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: calc(64px + var(--space-13));
+    padding-left: var(--space-13);
+    padding-right: var(--space-13);
+    padding-bottom: 280px;
+    /* More space on mobile due to full-width player */
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding-top: calc(64px + var(--space-8));
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+    padding-bottom: 300px;
+  }
+}
+
+
+/* ==========================================================================
+   CARDS - Material Honesty (No gratuitous gradients)
+   ========================================================================== */
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--space-13);
+  padding: var(--space-21);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all var(--duration-natural) var(--ease-organic);
+}
+
+.card:hover {
+  background: var(--bg-elevated);
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ==========================================================================
+   BUTTONS - Purposeful, minimal
+   ========================================================================== */
+
+.btn {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  padding: var(--space-13) var(--space-21);
+  border-radius: var(--space-55);
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-natural) var(--ease-organic);
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--bg-deep);
+}
+
+.btn-primary:hover {
+  background: var(--gold-light);
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ==========================================================================
+   PROGRESS BAR
+   ========================================================================== */
+
+.progress-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: width 100ms linear;
+}
+
+.progress-track:hover {
+  height: 5px;
+}
+
+.progress-track:hover .progress-fill {
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ==========================================================================
+   SCROLLBAR - Subtle
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
+
+.text-gold {
+  color: var(--gold);
+}
+
+.text-sage {
+  color: var(--sage);
+}
+
+.bg-gold-muted {
+  background: var(--gold-muted);
+}
+
+.bg-sage-muted {
+  background: var(--sage-muted);
+}
+
+/* Glass effect - subtle, for overlays */
+.glass {
+  background: rgba(10, 10, 10, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  -moz-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--bg-card) 0%,
+      var(--bg-elevated) 50%,
+      var(--bg-card) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--space-8);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ==========================================================================
+   ANIMATIONS - Organic, natural
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe var(--duration-breath) var(--ease-breath) infinite;
+}

@@ -1,0 +1,10 @@
+export { Home } from './Home';
+export { Login } from './Login';
+export { Register } from './Register';
+export { MusicPage } from './Music';
+export { Podcasts } from './Podcasts';
+export { Search } from './Search';
+export { Playlists } from './Playlists';
+export { AdminUpload } from './AdminUpload';
+export { Profile } from './Profile';
+export { Favorites } from './Favorites';
