@@ -3,7 +3,7 @@
  * Global audio player state management with Spotify-like queue functionality
  */
 import { createContext, useContext, useReducer, useRef, useEffect, type ReactNode } from 'react';
-import { storage, BUCKETS, getProxiedAudioUrlSync } from '../lib/appwrite';
+import { storage, BUCKETS, getProxiedAudioUrlSync, fetchProxiedAudioBlob, isAudioProxied } from '../lib/appwrite';
 import { historyService } from '../services';
 import type { PlayableItem, PlayerState } from '../types';
 
@@ -203,32 +203,78 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }, [state.repeat]);
 
     // Play when track changes
+    // Two-phase approach:
+    // 1. Start playing immediately with original URL (fast playback)
+    // 2. Fetch proxied blob URL in background (enables visualization)
+    // 3. Switch to blob URL when ready (seamless, enables Web Audio API)
     useEffect(() => {
         if (state.currentTrack && audioRef.current) {
-            // Use direct audio_url if available (Jamendo), otherwise use Appwrite storage
             let audioUrl: string;
+            let isExternalSource = false;
+            let originalExternalUrl: string | null = null;
 
             if ('audio_url' in state.currentTrack && state.currentTrack.audio_url) {
-                // Jamendo or external API tracks - use original URL for playback
-                // Note: Web Audio API visualization may be limited due to CORS on external sources
-                audioUrl = getProxiedAudioUrlSync(state.currentTrack.audio_url);
+                // Jamendo or external API tracks
+                originalExternalUrl = state.currentTrack.audio_url;
+                // Check if we already have a cached blob URL
+                audioUrl = getProxiedAudioUrlSync(originalExternalUrl);
+                isExternalSource = true;
             } else if ('audio_file_id' in state.currentTrack && state.currentTrack.audio_file_id) {
-                // Appwrite uploaded tracks - direct access, full visualization support
+                // Appwrite uploaded tracks - direct access
                 audioUrl = storage.getFileView(BUCKETS.AUDIO, state.currentTrack.audio_file_id).toString();
+                isExternalSource = false;
             } else {
                 console.error('No audio source available for track');
                 return;
             }
 
-            // Set crossOrigin for CORS (required for Web Audio API visualization)
-            // Note: This may not work for all external sources
-            audioRef.current.crossOrigin = 'anonymous';
+            // For external sources: start with original URL, fetch proxy in background
+            // For Appwrite sources: set crossOrigin for immediate visualization
+            if (isExternalSource) {
+                // Check if blob URL is already cached
+                if (isAudioProxied(originalExternalUrl!)) {
+                    // Use cached blob URL - enables visualization
+                    audioRef.current.crossOrigin = 'anonymous';
+                } else {
+                    // Start without crossOrigin for immediate playback
+                    audioRef.current.removeAttribute('crossorigin');
+
+                    // Fetch proxied blob in background for future visualization
+                    fetchProxiedAudioBlob(originalExternalUrl!).then((blobUrl) => {
+                        // If still playing the same track and we got a blob URL
+                        if (
+                            audioRef.current &&
+                            state.currentTrack &&
+                            'audio_url' in state.currentTrack &&
+                            state.currentTrack.audio_url === originalExternalUrl &&
+                            blobUrl !== originalExternalUrl
+                        ) {
+                            // Store current playback position
+                            const currentTime = audioRef.current.currentTime;
+                            const wasPlaying = !audioRef.current.paused;
+
+                            // Switch to blob URL (enables visualization)
+                            console.log('[Player] Switching to proxied blob URL for visualization');
+                            audioRef.current.crossOrigin = 'anonymous';
+                            audioRef.current.src = blobUrl;
+                            audioRef.current.currentTime = currentTime;
+
+                            if (wasPlaying) {
+                                audioRef.current.play().catch(console.error);
+                            }
+                        }
+                    }).catch((err) => {
+                        console.warn('[Player] Failed to fetch proxied audio:', err);
+                        // Continue with original URL - audio plays, just no visualization
+                    });
+                }
+            } else {
+                // Appwrite sources always support CORS
+                audioRef.current.crossOrigin = 'anonymous';
+            }
+
             audioRef.current.src = audioUrl;
-
-            // Reset connection attempt flag when source changes to allow re-initialization
-            // This is handled by the AudioAnalyzerContext watching audioRef.current?.src
-
-            audioRef.current.load(); // Explicitly load the new source
+            audioRef.current.load();
             audioRef.current.play()
                 .then(() => {
                     dispatch({ type: 'PLAY' });
@@ -239,7 +285,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 })
                 .catch((err) => {
                     console.error('Failed to play audio:', err);
-                    // If autoplay fails, user interaction is required
                 });
         }
     }, [state.currentTrack?.$id]);

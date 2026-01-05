@@ -2,12 +2,15 @@
  * Appwrite Client Configuration
  * Central configuration for all Appwrite services
  */
-import { Client, Account, Databases, Storage, Functions, ID, Query, ExecutionMethod } from 'appwrite';
+import { Client, Account, Databases, Storage, Functions, ID, Query } from 'appwrite';
 
 // Initialize Appwrite client
+const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
+const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+
 const client = new Client()
-    .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
-    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
+    .setEndpoint(endpoint || 'http://localhost:5173')
+    .setProject(projectId);
 
 // Export client and service instances
 export { client };
@@ -18,7 +21,7 @@ export const functions = new Functions(client);
 export { ID, Query };
 
 // Database ID constant
-export const DATABASE_ID = import.meta.env.VITE_DATABASE_ID || 'music_db';
+export const DATABASE_ID = import.meta.env.VITE_DATABASE_ID;
 
 // Collection IDs - matches Appwrite database schema
 export const COLLECTIONS = {
@@ -42,93 +45,124 @@ export const BUCKETS = {
 export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];
 export type BucketName = typeof BUCKETS[keyof typeof BUCKETS];
 
-// Audio Proxy Function ID
-const AUDIO_PROXY_FUNCTION_ID = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
-
 /**
- * Cache for proxied audio blob URLs
- * Maps original URL -> blob URL
+ * Audio Proxy Configuration
+ * 
+ * For Web Audio API visualization to work with cross-origin audio (like Jamendo),
+ * we need to fetch the audio through a CORS proxy and create a Blob URL.
+ * Blob URLs are same-origin, so Web Audio API can analyze them.
  */
+
+// Cache for proxied audio blob URLs (original URL -> blob URL)
 const audioProxyCache = new Map<string, string>();
 
+// Pending proxy requests to avoid duplicate fetches
+const pendingProxyRequests = new Map<string, Promise<string>>();
+
 /**
- * Get proxied audio for external sources (Jamendo)
- * Uses Appwrite function to add CORS headers for Web Audio API visualization
+ * Fetch audio through CORS proxy and return a Blob URL
+ * This enables Web Audio API visualization for cross-origin audio
  * 
- * This fetches audio through the proxy function and creates a blob URL
- * that can be used with both <audio> element and Web Audio API
- * 
- * @param originalUrl - The original Jamendo audio URL
- * @returns Promise<string> - Blob URL with CORS-safe audio
+ * @param originalUrl - The original audio URL (e.g., Jamendo)
+ * @returns Promise<string> - A blob URL that can be used with Web Audio API
  */
-export async function getProxiedAudioUrl(originalUrl: string): Promise<string> {
-    // Check cache first
+export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string> {
+    // Return cached blob URL if available
     if (audioProxyCache.has(originalUrl)) {
         return audioProxyCache.get(originalUrl)!;
     }
 
-    // If no proxy function configured, return original URL
-    if (!AUDIO_PROXY_FUNCTION_ID) {
-        console.warn('VITE_FUNCTION_AUDIO_PROXY not set, using original URL');
-        return originalUrl;
+    // Return pending request if already in progress
+    if (pendingProxyRequests.has(originalUrl)) {
+        return pendingProxyRequests.get(originalUrl)!;
     }
 
-    try {
-        // Call the audio-proxy function via Appwrite SDK
-        // The function has execute: ["any"] so it works without auth
-        const execution = await functions.createExecution(
-            AUDIO_PROXY_FUNCTION_ID,
-            '', // no body needed, URL is in query/path
-            false, // sync execution
-            `/?url=${encodeURIComponent(originalUrl)}`, // path with URL param
-            ExecutionMethod.GET
-        );
+    // Start the fetch
+    const fetchPromise = (async () => {
+        try {
+            const proxyUrl = buildAudioProxyUrl(originalUrl);
 
-        if (execution.status !== 'completed') {
-            console.error('Audio proxy execution failed:', execution.errors);
-            return originalUrl;
-        }
-
-        // The response body is the audio data as base64 or Uint8Array
-        // For large audio files, we should use streaming, but for now:
-        const responseData = execution.responseBody;
-
-        // If the response is base64 audio data, convert to blob
-        if (responseData && responseData.length > 0) {
-            // Try to parse as JSON first (error response)
-            try {
-                const jsonResponse = JSON.parse(responseData);
-                if (!jsonResponse.success) {
-                    console.error('Audio proxy error:', jsonResponse.error);
-                    return originalUrl;
-                }
-            } catch {
-                // Not JSON, assume it's audio data
-                // Convert to blob URL
-                const blob = new Blob([Uint8Array.from(atob(responseData), c => c.charCodeAt(0))], {
-                    type: 'audio/mpeg'
-                });
-                const blobUrl = URL.createObjectURL(blob);
-                audioProxyCache.set(originalUrl, blobUrl);
-                return blobUrl;
+            if (!proxyUrl) {
+                console.warn('Audio proxy not configured, using original URL');
+                return originalUrl;
             }
-        }
 
-        return originalUrl;
-    } catch (error) {
-        console.error('Audio proxy call failed:', error);
-        return originalUrl;
-    }
+            console.log('[AudioProxy] Fetching via proxy:', originalUrl.substring(0, 50) + '...');
+
+            // Fetch through the proxy with appropriate headers
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'audio/mpeg, audio/*',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Proxy fetch failed: ${response.status}`);
+            }
+
+            // Get the audio as a blob
+            const blob = await response.blob();
+
+            // Create a blob URL (same-origin, enables Web Audio API)
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Cache it
+            audioProxyCache.set(originalUrl, blobUrl);
+
+            console.log('[AudioProxy] Created blob URL:', blobUrl.substring(0, 50) + '...');
+
+            return blobUrl;
+        } catch (error) {
+            console.error('[AudioProxy] Fetch failed, falling back to original:', error);
+            return originalUrl;
+        } finally {
+            // Clean up pending request
+            pendingProxyRequests.delete(originalUrl);
+        }
+    })();
+
+    pendingProxyRequests.set(originalUrl, fetchPromise);
+    return fetchPromise;
 }
 
 /**
- * Sync version that returns original URL immediately
- * Use getProxiedAudioUrl for proper CORS proxying
+ * Build the audio proxy URL
+ * Uses the Appwrite function execution endpoint
+ */
+function buildAudioProxyUrl(originalUrl: string): string | null {
+    const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
+    const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+    const functionId = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
+
+    if (!endpoint || !projectId || !functionId) {
+        return null;
+    }
+
+    // Appwrite function execution URL with query parameter
+    // Format: {endpoint}/functions/{functionId}/executions?url={encodedUrl}
+    // Note: For public functions (execute: ["any"]), we can call via REST
+    return `${endpoint}/functions/${functionId}/executions?url=${encodeURIComponent(originalUrl)}`;
+}
+
+/**
+ * Sync version - returns original URL immediately
+ * Used for initial audio element src before proxy fetch completes
  */
 export function getProxiedAudioUrlSync(originalUrl: string): string {
-    // For sync access (like audio element src), use original URL
-    // Web Audio API visualization may not work for Jamendo tracks
+    // Return cached blob URL if available
+    if (audioProxyCache.has(originalUrl)) {
+        return audioProxyCache.get(originalUrl)!;
+    }
+    // Otherwise return original for immediate playback
     return originalUrl;
+}
+
+/**
+ * Check if a URL has been proxied and cached
+ */
+export function isAudioProxied(originalUrl: string): boolean {
+    return audioProxyCache.has(originalUrl);
 }
 
 /**
@@ -136,8 +170,19 @@ export function getProxiedAudioUrlSync(originalUrl: string): string {
  */
 export function revokeProxiedAudioUrl(originalUrl: string): void {
     const blobUrl = audioProxyCache.get(originalUrl);
-    if (blobUrl) {
+    if (blobUrl && blobUrl.startsWith('blob:')) {
         URL.revokeObjectURL(blobUrl);
         audioProxyCache.delete(originalUrl);
     }
+}
+
+/**
+ * Preload audio through proxy for smoother playback
+ * Call this when hovering over a track or loading a playlist
+ */
+export function preloadAudioProxy(originalUrl: string): void {
+    // Fire and forget - preload in background
+    fetchProxiedAudioBlob(originalUrl).catch(() => {
+        // Ignore errors during preload
+    });
 }

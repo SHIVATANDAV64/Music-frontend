@@ -30,11 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function checkSession() {
         try {
             const session = await account.get();
-            if (session) {
+            if (session && session.$id) {
                 await fetchUserProfile(session.$id);
+            } else {
+                // Invalid session data
+                setState({ user: null, isLoading: false, isAuthenticated: false });
             }
-        } catch {
-            // No active session
+        } catch (error) {
+            // No active session or session expired
+            console.log('No active session');
             setState({ user: null, isLoading: false, isAuthenticated: false });
         }
     }
@@ -52,18 +56,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isLoading: false,
                 isAuthenticated: true,
             });
-        } catch {
-            // Profile doesn't exist yet - use basic account info
-            const session = await account.get();
-            setState({
-                user: {
-                    $id: session.$id,
-                    username: session.name || session.email,
-                    is_admin: false,
-                } as User,
-                isLoading: false,
-                isAuthenticated: true,
-            });
+        } catch (profileError) {
+            // Profile doesn't exist - try to get account info
+            try {
+                const session = await account.get();
+                if (session && session.$id && (session.name || session.email)) {
+                    setState({
+                        user: {
+                            $id: session.$id,
+                            username: session.name || session.email.split('@')[0],
+                            is_admin: false,
+                        } as User,
+                        isLoading: false,
+                        isAuthenticated: true,
+                    });
+                } else {
+                    // Invalid session data - logout
+                    console.warn('Invalid session data, logging out');
+                    setState({ user: null, isLoading: false, isAuthenticated: false });
+                }
+            } catch (sessionError) {
+                // Session is invalid - not authenticated
+                console.warn('Session invalid during profile fetch');
+                setState({ user: null, isLoading: false, isAuthenticated: false });
+            }
         }
     }
 
