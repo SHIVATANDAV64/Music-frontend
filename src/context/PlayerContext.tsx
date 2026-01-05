@@ -260,7 +260,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                             audioRef.current.currentTime = currentTime;
 
                             if (wasPlaying) {
-                                audioRef.current.play().catch(console.error);
+                                const playPromise = audioRef.current.play();
+                                if (playPromise !== undefined) {
+                                    playPromise.catch(error => {
+                                        if (error.name !== 'AbortError') {
+                                            console.warn('[Player] Transition play interrupted:', error);
+                                        }
+                                    });
+                                }
                             }
                         }
                     }).catch((err) => {

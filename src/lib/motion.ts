@@ -160,10 +160,10 @@ export const motionVariants = {
  */
 export const particlePhysics = {
     /** Damping factor (0-1) - how quickly particles slow down */
-    damping: 0.92,
+    damping: 0.90, // Increased responsiveness
 
     /** Spring stiffness for particle attraction to formation points */
-    stiffness: 0.05,
+    stiffness: 0.08, // Increased for snappier sync
 
     /** Maximum particle velocity (prevents explosion) */
     maxVelocity: 5,

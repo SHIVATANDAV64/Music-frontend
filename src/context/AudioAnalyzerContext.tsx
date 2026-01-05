@@ -157,9 +157,14 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
             analyzer.getByteFrequencyData(frequencies as unknown as Uint8Array<ArrayBuffer>);
             analyzer.getByteTimeDomainData(waveform as unknown as Uint8Array<ArrayBuffer>);
 
-            // Calculate energy in different frequency ranges
-            const bassEnd = Math.floor(frequencies.length * 0.1);
-            const midEnd = Math.floor(frequencies.length * 0.4);
+            // Calculate energy in different frequency ranges with more precision
+            // Standard audio bands:
+            // Bass: 20Hz - 250Hz
+            // Mids: 250Hz - 4000Hz
+            // Treble: 4000Hz+
+            // Each bin is approx 21.5Hz with FFT 2048
+            const bassEnd = 12; // ~250Hz
+            const midEnd = 186; // ~4000Hz
 
             let bassSum = 0, midSum = 0, trebleSum = 0, volumeSum = 0;
 
@@ -176,13 +181,16 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
                 }
             }
 
+            // Apply a slight boost to responsiveness
+            const sensitivity = 1.2;
+
             setFrequencyData({
                 frequencies: frequencies.slice(),
                 waveform: waveform.slice(),
-                bassEnergy: bassSum / bassEnd,
-                midEnergy: midSum / (midEnd - bassEnd),
-                trebleEnergy: trebleSum / (frequencies.length - midEnd),
-                volume: volumeSum / frequencies.length,
+                bassEnergy: Math.min(1, (bassSum / (bassEnd || 1)) * sensitivity),
+                midEnergy: Math.min(1, (midSum / ((midEnd - bassEnd) || 1)) * sensitivity),
+                trebleEnergy: Math.min(1, (trebleSum / ((frequencies.length - midEnd) || 1)) * sensitivity),
+                volume: Math.min(1, (volumeSum / (frequencies.length || 1)) * sensitivity),
             });
 
             animationFrameRef.current = requestAnimationFrame(analyze);

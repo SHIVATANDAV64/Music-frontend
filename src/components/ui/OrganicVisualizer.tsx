@@ -12,6 +12,7 @@
  */
 import { motion, useSpring, useTransform } from 'framer-motion';
 import { usePlayer } from '../../context/PlayerContext';
+import { useAudioFrequency } from '../../context/AudioAnalyzerContext';
 import { useState, useEffect, useMemo } from 'react';
 
 type VisualizerMode = 'ambient' | 'wave' | 'hero';
@@ -29,7 +30,8 @@ export function OrganicVisualizer({
     mode = 'ambient',
     className = ''
 }: OrganicVisualizerProps) {
-    const { isPlaying, audioRef } = usePlayer();
+    const { isPlaying } = usePlayer();
+    const frequencyData = useAudioFrequency();
     const [audioData, setAudioData] = useState<number[]>([]);
 
     // Fibonacci-based element counts for natural distribution
@@ -41,31 +43,39 @@ export function OrganicVisualizer({
 
     const elementCount = elementCounts[mode];
 
-    // Simple audio analysis for organic response
+    // Responsive audio mapping
     useEffect(() => {
-        if (!isPlaying || !audioRef.current) {
+        if (!isPlaying || !frequencyData) {
             // When not playing, gentle idle breathing
-            const idleData = Array(elementCount).fill(0).map(() =>
-                0.2 + Math.random() * 0.1
+            const phase = Date.now() / 2000;
+            const idleData = Array(elementCount).fill(0).map((_, i) =>
+                0.2 + Math.sin(phase + i * 0.5) * 0.05
             );
             setAudioData(idleData);
             return;
         }
 
-        // Simulate audio response (in a real app, use Web Audio API)
-        const interval = setInterval(() => {
-            const newData = Array(elementCount).fill(0).map((_, i) => {
-                // Organic variation with Fibonacci-inspired timing
-                const phase = (Date.now() / 1000) + (i * 0.618); // Golden ratio phase offset
-                const base = 0.3 + Math.sin(phase * 2) * 0.3;
-                const variation = Math.random() * 0.2;
-                return Math.min(1, base + variation);
-            });
-            setAudioData(newData);
-        }, 100);
+        // Map frequency bins to visual elements
+        const bins = frequencyData.frequencies;
+        const binsPerElement = Math.floor(bins.length / elementCount);
 
-        return () => clearInterval(interval);
-    }, [isPlaying, elementCount, audioRef]);
+        const newData = Array(elementCount).fill(0).map((_, i) => {
+            const start = i * binsPerElement;
+            // Focus more on the musical range (first 50% of spectrum) for better visuals
+            const actualStart = Math.floor(start * 0.5);
+            const actualEnd = Math.floor((start + binsPerElement) * 0.5);
+
+            const slice = bins.slice(actualStart, actualEnd);
+            const avg = slice.length > 0
+                ? slice.reduce((a, b) => a + b, 0) / slice.length
+                : 0;
+
+            // Apply log-like scaling for better visibility of quieter parts
+            return Math.min(1, (avg / 255) * 1.5);
+        });
+
+        setAudioData(newData);
+    }, [frequencyData, isPlaying, elementCount]);
 
     // Mode-specific styles
     const modeStyles = useMemo(() => ({
