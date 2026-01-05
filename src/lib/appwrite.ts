@@ -40,9 +40,6 @@ export const BUCKETS = {
 export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];
 export type BucketName = typeof BUCKETS[keyof typeof BUCKETS];
 
-// Audio proxy function ID
-const AUDIO_PROXY_FUNCTION_ID = 'audio-proxy';
-
 /**
  * Get the proxied audio URL for external audio sources (Jamendo)
  * 
@@ -55,11 +52,17 @@ const AUDIO_PROXY_FUNCTION_ID = 'audio-proxy';
 export function getProxiedAudioUrl(originalUrl: string): string {
     const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
     const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+    const audioProxyFunctionId = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
+
+    if (!audioProxyFunctionId) {
+        console.error('VITE_FUNCTION_AUDIO_PROXY not set in environment');
+        return originalUrl;
+    }
 
     // Encode the URL for safe transmission as a query parameter
     const encodedUrl = encodeURIComponent(originalUrl);
 
     // Appwrite function execution URL format
-    return `${endpoint}/functions/${AUDIO_PROXY_FUNCTION_ID}/executions?url=${encodedUrl}&project=${projectId}`;
+    return `${endpoint}/functions/${audioProxyFunctionId}/executions?url=${encodedUrl}&project=${projectId}`;
 }
 

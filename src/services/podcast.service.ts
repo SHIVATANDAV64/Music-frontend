@@ -1,9 +1,21 @@
 /**
  * Podcast Service
- * API layer for podcasts and episodes
+ * API layer for podcasts and episodes via Appwrite Functions
  */
-import { databases, DATABASE_ID, COLLECTIONS, Query } from '../lib/appwrite';
+import { getPodcasts } from '../lib/functions';
 import type { Podcast, Episode } from '../types';
+
+interface PodcastResponse {
+    $id: string;
+    title: string;
+    author: string;
+    description?: string;
+    category?: string;
+    cover_image_id?: string;
+    $createdAt: string;
+    $updatedAt: string;
+    episodes?: Episode[];
+}
 
 export const podcastService = {
     /**
@@ -14,65 +26,60 @@ export const podcastService = {
         limit?: number;
         offset?: number;
     }): Promise<Podcast[]> {
-        const queries = [];
+        const response = await getPodcasts<PodcastResponse[]>({
+            category: options?.category,
+            limit: options?.limit,
+            offset: options?.offset,
+        });
 
-        if (options?.category) {
-            queries.push(Query.equal('category', options.category));
+        if (!response.success) {
+            console.error('Failed to get podcasts:', response.error);
+            return [];
         }
-        if (options?.limit) {
-            queries.push(Query.limit(options.limit));
-        }
-        if (options?.offset) {
-            queries.push(Query.offset(options.offset));
-        }
 
-        queries.push(Query.orderDesc('$createdAt'));
-
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.PODCASTS,
-            queries
-        );
-
-        return response.documents as unknown as Podcast[];
+        return (response.data || []) as unknown as Podcast[];
     },
 
     /**
-     * Get single podcast by ID
+     * Get single podcast by ID with optional episodes
      */
-    async getPodcast(id: string): Promise<Podcast> {
-        const response = await databases.getDocument(
-            DATABASE_ID,
-            COLLECTIONS.PODCASTS,
-            id
-        );
-        return response as unknown as Podcast;
+    async getPodcast(id: string): Promise<Podcast | null> {
+        const response = await getPodcasts<PodcastResponse>({
+            podcastId: id,
+            includeEpisodes: true,
+        });
+
+        if (!response.success) {
+            console.error('Failed to get podcast:', response.error);
+            return null;
+        }
+
+        return response.data as unknown as Podcast;
     },
 
     /**
      * Get episodes for a podcast
      */
     async getEpisodes(podcastId: string): Promise<Episode[]> {
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.EPISODES,
-            [
-                Query.equal('podcast_id', podcastId),
-                Query.orderDesc('episode_number')
-            ]
-        );
-        return response.documents as unknown as Episode[];
+        const response = await getPodcasts<PodcastResponse>({
+            podcastId,
+            includeEpisodes: true,
+        });
+
+        if (!response.success || !response.data) {
+            console.error('Failed to get episodes:', response.error);
+            return [];
+        }
+
+        return response.data.episodes || [];
     },
 
     /**
      * Get single episode by ID
+     * Note: Direct episode fetch not implemented - episodes are fetched via parent podcast
      */
-    async getEpisode(id: string): Promise<Episode> {
-        const response = await databases.getDocument(
-            DATABASE_ID,
-            COLLECTIONS.EPISODES,
-            id
-        );
-        return response as unknown as Episode;
+    async getEpisode(_id: string): Promise<Episode | null> {
+        console.warn('getEpisode: Direct episode fetch not implemented in function');
+        return null;
     },
 };

@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Music, Mic2, X, Check, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { storage, databases, DATABASE_ID, COLLECTIONS, BUCKETS, ID } from '../lib/appwrite';
+import { storage, BUCKETS, ID } from '../lib/appwrite';
+import { adminUpload } from '../lib/functions';
 
 type ContentType = 'track' | 'podcast';
 
@@ -93,36 +94,37 @@ export function AdminUpload() {
             setUploadState((s) => ({ ...s, progress: 70 }));
 
             if (contentType === 'track') {
-                // Create track document
-                await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTIONS.TRACKS,
-                    ID.unique(),
-                    {
+                // Create track document via function
+                const result = await adminUpload({
+                    contentType: 'track',
+                    data: {
                         title: trackForm.title,
                         artist: trackForm.artist,
                         album: trackForm.album || null,
                         genre: trackForm.genre || null,
                         duration: trackForm.duration || 0,
-                        audio_file_id: audioUpload.$id,
-                        cover_image_id: coverImageId,
-                        play_count: 0,
-                    }
-                );
+                        audioFileId: audioUpload.$id,
+                        coverImageId: coverImageId,
+                    },
+                });
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to create track');
+                }
             } else {
-                // Create podcast document
-                await databases.createDocument(
-                    DATABASE_ID,
-                    COLLECTIONS.PODCASTS,
-                    ID.unique(),
-                    {
+                // Create podcast document via function
+                const result = await adminUpload({
+                    contentType: 'podcast',
+                    data: {
                         title: podcastForm.title,
                         author: podcastForm.author,
                         description: podcastForm.description || null,
                         category: podcastForm.category || null,
-                        cover_image_id: coverImageId,
-                    }
-                );
+                        coverImageId: coverImageId,
+                    },
+                });
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to create podcast');
+                }
             }
 
             setUploadState({ isUploading: false, progress: 100, error: null, success: true });
@@ -171,8 +173,8 @@ export function AdminUpload() {
                 <button
                     onClick={() => setContentType('track')}
                     className={`flex-1 p-4 rounded-xl flex items-center justify-center gap-2 transition-all ${contentType === 'track'
-                            ? 'bg-accent text-white'
-                            : 'glass text-text-secondary hover:bg-white/10'
+                        ? 'bg-accent text-white'
+                        : 'glass text-text-secondary hover:bg-white/10'
                         }`}
                 >
                     <Music size={20} />
@@ -181,8 +183,8 @@ export function AdminUpload() {
                 <button
                     onClick={() => setContentType('podcast')}
                     className={`flex-1 p-4 rounded-xl flex items-center justify-center gap-2 transition-all ${contentType === 'podcast'
-                            ? 'bg-accent text-white'
-                            : 'glass text-text-secondary hover:bg-white/10'
+                        ? 'bg-accent text-white'
+                        : 'glass text-text-secondary hover:bg-white/10'
                         }`}
                 >
                     <Mic2 size={20} />

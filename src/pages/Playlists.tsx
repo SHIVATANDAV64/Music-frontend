@@ -76,9 +76,11 @@ export function Playlists() {
                 user.$id,
                 newPlaylistName.trim()
             );
-            setPlaylists((prev) => [newPlaylist, ...prev]);
-            setNewPlaylistName('');
-            setShowCreateModal(false);
+            if (newPlaylist) {
+                setPlaylists((prev) => [newPlaylist, ...prev]);
+                setNewPlaylistName('');
+                setShowCreateModal(false);
+            }
         } catch (error) {
             console.error('Failed to create playlist:', error);
         } finally {

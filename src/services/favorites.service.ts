@@ -1,177 +1,149 @@
 /**
  * Favorites Service
- * Like/Unlike tracks functionality
+ * Like/Unlike tracks via Appwrite Functions
  */
-import { databases, DATABASE_ID, COLLECTIONS, ID, Query } from '../lib/appwrite';
-import type { Favorite, Track } from '../types';
+import { manageFavorites } from '../lib/functions';
+import type { Track } from '../types';
+
+interface FavoriteResponse {
+    $id: string;
+    user_id: string;
+    track_id: string;
+    track_source: 'jamendo' | 'appwrite';
+    $createdAt: string;
+    track?: Track;
+}
 
 export const favoritesService = {
     /**
      * Check if a track is favorited by user
-     * @param userId - User ID
-     * @param trackId - Track ID to check
-     * @returns Boolean indicating if track is favorited
      */
     async isFavorite(userId: string, trackId: string): Promise<boolean> {
         if (!userId || !trackId) return false;
 
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.FAVORITES,
-            [
-                Query.equal('user_id', userId),
-                Query.equal('track_id', trackId),
-                Query.limit(1),
-            ]
-        );
+        const response = await manageFavorites<{ isFavorite: boolean }>({
+            action: 'check',
+            trackId,
+        });
 
-        return response.total > 0;
+        return response.success && response.data?.isFavorite === true;
     },
 
     /**
      * Add track to favorites
-     * @param userId - User ID
-     * @param track - Track object (includes source for hybrid architecture)
      */
     async addFavorite(userId: string, track: Track): Promise<void> {
         if (!userId || !track) {
             throw new Error('User ID and track are required');
         }
 
-        // Check if already favorited (unique index will also prevent duplicates)
-        const existing = await this.isFavorite(userId, track.$id);
-        if (existing) return;
+        const response = await manageFavorites({
+            action: 'add',
+            trackId: track.$id,
+            trackSource: track.source,
+        });
 
-        await databases.createDocument(
-            DATABASE_ID,
-            COLLECTIONS.FAVORITES,
-            ID.unique(),
-            {
-                user_id: userId,
-                track_id: track.$id,
-                track_source: track.source, // NEW: Store source for hybrid fetch
-            },
-            [
-                `read("user:${userId}")`,
-                `delete("user:${userId}")`,
-            ]
-        );
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to add favorite');
+        }
     },
 
     /**
      * Remove track from favorites
-     * @param userId - User ID
-     * @param trackId - Track to unfavorite
      */
-    async removeFavorite(userId: string, trackId: string): Promise<void> {
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.FAVORITES,
-            [
-                Query.equal('user_id', userId),
-                Query.equal('track_id', trackId),
-            ]
-        );
+    async removeFavorite(_userId: string, trackId: string): Promise<void> {
+        const response = await manageFavorites({
+            action: 'remove',
+            trackId,
+        });
 
-        if (response.documents.length > 0) {
-            await databases.deleteDocument(
-                DATABASE_ID,
-                COLLECTIONS.FAVORITES,
-                response.documents[0].$id
-            );
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to remove favorite');
         }
     },
 
     /**
      * Toggle favorite status
-     * @param userId - User ID
-     * @param track - Track to toggle
-     * @returns New favorite status
+     * @returns New favorite status (true = favorited, false = unfavorited)
      */
-    async toggleFavorite(userId: string, track: Track): Promise<boolean> {
-        const isFav = await this.isFavorite(userId, track.$id);
+    async toggleFavorite(_userId: string, track: Track): Promise<boolean> {
+        const response = await manageFavorites<{ isFavorite: boolean }>({
+            action: 'toggle',
+            trackId: track.$id,
+            trackSource: track.source,
+        });
 
-        if (isFav) {
-            await this.removeFavorite(userId, track.$id);
-            return false;
-        } else {
-            await this.addFavorite(userId, track);
-            return true;
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to toggle favorite');
         }
+
+        return response.data?.isFavorite ?? false;
     },
 
     /**
      * Get all favorited tracks for a user
-     * Handles hybrid architecture - fetches from Jamendo or Appwrite based on source
-     * @param userId - User ID
-     * @returns Array of favorited tracks
+     * Handles hybrid architecture - returns tracks with full data
      */
     async getUserFavorites(userId: string): Promise<Track[]> {
         if (!userId) return [];
 
-        const favorites = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.FAVORITES,
-            [
-                Query.equal('user_id', userId),
-                Query.orderDesc('$createdAt'),
-            ]
-        );
+        const response = await manageFavorites<FavoriteResponse[]>({
+            action: 'list',
+        });
 
-        if (favorites.documents.length === 0) {
+        if (!response.success) {
+            console.error('Failed to get favorites:', response.error);
             return [];
         }
 
-        // Fetch actual track data based on source
-        const tracks = await Promise.all(
-            favorites.documents.map(async (fav) => {
-                const favorite = fav as unknown as Favorite;
+        // Map favorites to tracks
+        // For Jamendo tracks, the function returns track_id to be fetched client-side
+        // For Appwrite tracks, the function fetches the full track data
+        const favorites = response.data || [];
+        const tracks: Track[] = [];
 
-                // Check source for hybrid fetch
-                if (favorite.track_source === 'jamendo') {
-                    // TODO: Fetch from Jamendo API by ID
-                    console.warn(`Jamendo track ${favorite.track_id} in favorites - direct fetch not yet implemented`);
-                    return null;
-                } else {
-                    // Appwrite track - fetch from database
-                    try {
-                        const track = await databases.getDocument(
-                            DATABASE_ID,
-                            COLLECTIONS.TRACKS,
-                            favorite.track_id
-                        );
-                        return { ...track, source: 'appwrite' } as unknown as Track;
-                    } catch {
-                        // Track may have been deleted
-                        return null;
-                    }
-                }
-            })
-        );
+        for (const fav of favorites) {
+            if (fav.track) {
+                // Appwrite track with full data
+                tracks.push(fav.track);
+            } else if (fav.track_source === 'jamendo') {
+                // Jamendo tracks need to be fetched separately
+                // Return a placeholder that can be identified and fetched
+                tracks.push({
+                    $id: fav.track_id,
+                    $createdAt: fav.$createdAt,
+                    $updatedAt: fav.$createdAt,
+                    $permissions: [],
+                    $databaseId: 'jamendo',
+                    $collectionId: 'tracks',
+                    title: 'Loading...',
+                    artist: '',
+                    album: '',
+                    duration: 0,
+                    play_count: 0,
+                    source: 'jamendo',
+                    jamendo_id: fav.track_id,
+                } as unknown as Track);
+            }
+        }
 
-        // Filter out null values (deleted tracks or unimplemented Jamendo)
-        return tracks.filter((t): t is Track => t !== null);
+        return tracks;
     },
 
     /**
      * Get favorite IDs for efficient checking (useful for lists)
-     * @param userId - User ID
-     * @returns Set of favorited track IDs
      */
     async getFavoriteIds(userId: string): Promise<Set<string>> {
         if (!userId) return new Set();
 
-        const favorites = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.FAVORITES,
-            [
-                Query.equal('user_id', userId),
-                Query.select(['track_id']), // Only fetch track_id for efficiency
-            ]
-        );
+        const response = await manageFavorites<{ ids: string[] }>({
+            action: 'get_ids',
+        });
 
-        return new Set(
-            favorites.documents.map((f) => (f as unknown as Favorite).track_id)
-        );
+        if (!response.success) {
+            return new Set();
+        }
+
+        return new Set(response.data?.ids || []);
     },
 };
