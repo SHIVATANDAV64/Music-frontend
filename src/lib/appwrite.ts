@@ -11,12 +11,26 @@ const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 console.log('[Appwrite DEBUG] Endpoint:', endpoint);
 console.log('[Appwrite DEBUG] Project ID:', projectId);
 
-if (!endpoint || endpoint.includes('localhost')) {
-    console.warn('[Appwrite WARNING] Endpoint is pointed to LOCALHOST or is empty. Requests WILL fail in production.');
+// Endpoint Validation
+if (!endpoint) {
+    console.error('[Appwrite ERROR] VITE_APPWRITE_ENDPOINT is missing!');
+} else {
+    // Check if it looks like a static site instead of API
+    if (endpoint.includes('appwrite.network') && !endpoint.includes('/v1')) {
+        console.error('[Appwrite ERROR] The endpoint looks like a static site URL (appwrite.network) but is missing "/v1". You might have pointed your API to your own website URL!');
+    }
+
+    if (endpoint.includes('localhost') && !endpoint.includes(':')) {
+        console.warn('[Appwrite WARNING] Localhost endpoint might be missing a port.');
+    }
+
+    if (!endpoint.startsWith('http')) {
+        console.error('[Appwrite ERROR] Endpoint must start with http:// or https://');
+    }
 }
 
 const client = new Client()
-    .setEndpoint(endpoint || 'http://localhost:5173')
+    .setEndpoint(endpoint)
     .setProject(projectId);
 
 // Export client and service instances
@@ -91,32 +105,54 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
     // Start the fetch
     const fetchPromise = (async () => {
         try {
-            const proxyUrl = buildAudioProxyUrl(originalUrl);
-
-            if (!proxyUrl) {
-                console.warn('Audio proxy not configured, using original URL');
+            const functionId = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
+            if (!functionId) {
+                console.warn('[AudioProxy] Function ID missing, falling back to original');
                 return originalUrl;
             }
 
-            console.log('[AudioProxy] Fetching via proxy:', originalUrl.substring(0, 50) + '...');
+            console.log('[AudioProxy] Executing proxy function for:', originalUrl.substring(0, 50) + '...');
 
-            // Fetch through the proxy with appropriate headers
-            const response = await fetch(proxyUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'audio/mpeg, audio/*',
-                },
-            });
+            // Use the SDK instead of manual fetch to ensure Project/Session headers are included
+            const execution = await functions.createExecution(
+                functionId,
+                JSON.stringify({ url: originalUrl }),
+                false // synchronous execution
+            );
 
-            if (!response.ok) {
-                throw new Error(`Proxy fetch failed: ${response.status}`);
+            if (execution.status !== 'completed') {
+                console.error('[AudioProxy] Function execution failed:', execution);
+                if (execution.status === 'failed') {
+                    console.error('[AudioProxy] Function Error:', execution.errors);
+                }
+                throw new Error(`Proxy execution failed with status: ${execution.status}`);
             }
 
-            // Get the audio as a blob
-            const blob = await response.blob();
+            // The function returns the audio data in execution.responseBody
+            // Our function uses res.send(audioData), which Appwrite Cloud handles.
+
+            // If the response is empty or indicates error
+            if (!execution.responseBody) {
+                throw new Error('Proxy returned empty response');
+            }
+
+            // Most Appwrite functions return binary as base64 in the responseBody if using res.send()
+            let audioBlob: Blob;
+            try {
+                // Try to decode as base64
+                const binaryString = atob(execution.responseBody);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+            } catch {
+                // If not base64, assume it's the raw string (UTF-8)
+                audioBlob = new Blob([execution.responseBody], { type: 'audio/mpeg' });
+            }
 
             // Create a blob URL (same-origin, enables Web Audio API)
-            const blobUrl = URL.createObjectURL(blob);
+            const blobUrl = URL.createObjectURL(audioBlob);
 
             // Cache it
             audioProxyCache.set(originalUrl, blobUrl);
@@ -124,8 +160,14 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
             console.log('[AudioProxy] Created blob URL:', blobUrl.substring(0, 50) + '...');
 
             return blobUrl;
-        } catch (error) {
-            console.error('[AudioProxy] Fetch failed, falling back to original:', error);
+        } catch (error: any) {
+            console.error('[AudioProxy] Proxy failed:', error);
+
+            if (error.code === 401 || error.code === 403) {
+                console.error('[AudioProxy] PERMISSION ERROR: Please ensure the "Audio Proxy" function has "Execute Access" set to "any" or "users" in Appwrite Console.');
+            }
+
+            console.warn('[AudioProxy] Falling back to original URL. Visualization will be disabled due to CORS.');
             return originalUrl;
         } finally {
             // Clean up pending request
@@ -141,6 +183,10 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
  * Build the audio proxy URL
  * Uses the Appwrite function execution endpoint
  */
+// Ensure buildAudioProxyUrl is not marked as unused if we want to keep it
+// but we've switched to SDK execution for better security/CORS.
+// I will comment it out or delete it to avoid lint warnings if not needed.
+/*
 function buildAudioProxyUrl(originalUrl: string): string | null {
     const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
     const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
@@ -155,6 +201,7 @@ function buildAudioProxyUrl(originalUrl: string): string | null {
     // Note: For public functions (execute: ["any"]), we can call via REST
     return `${endpoint}/functions/${functionId}/executions?url=${encodeURIComponent(originalUrl)}`;
 }
+*/
 
 /**
  * Sync version - returns original URL immediately

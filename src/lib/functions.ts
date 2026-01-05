@@ -1,5 +1,13 @@
-import { Functions, ExecutionMethod } from 'appwrite';
-import { client } from './appwrite';
+import { functions } from './appwrite';
+
+// Response types
+export interface FunctionResponse<T = unknown> {
+    success: boolean;
+    data?: T;
+    error?: string;
+    total?: number;
+    hasMore?: boolean;
+}
 
 // Function IDs from environment variables
 const FUNCTION_IDS = {
@@ -16,16 +24,16 @@ const FUNCTION_IDS = {
 export type FunctionId = string;
 
 // Initialize Appwrite Functions SDK
-const functions = new Functions(client);
+// const functions = new Functions(client); // This line is removed as 'functions' is now imported
 
 // Response types
-export interface FunctionResponse<T = unknown> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    total?: number;
-    hasMore?: boolean;
-}
+// export interface FunctionResponse<T = unknown> { // This interface is now imported
+//     success: boolean;
+//     data?: T;
+//     error?: string;
+//     total?: number;
+//     hasMore?: boolean;
+// }
 
 /**
  * Execute an Appwrite Function using the SDK
@@ -47,38 +55,33 @@ export async function callFunction<T>(
         // Use Appwrite SDK - it automatically handles session/JWT
         const execution = await functions.createExecution(
             functionId,
-            JSON.stringify(body), // body
-            false, // async
-            '/', // path
-            ExecutionMethod.POST // method - use enum
+            JSON.stringify(body),
+            false // async = false
         );
 
-        // Check if execution completed successfully
+        console.log(`[Functions] Result for ${functionId}:`, execution.status);
+
         if (execution.status === 'completed') {
             try {
-                const response = JSON.parse(execution.responseBody || '{}');
-                return response;
-            } catch {
-                return { success: false, error: 'Failed to parse function response' };
+                const response = JSON.parse(execution.responseBody);
+                return { success: true, data: response as T };
+            } catch (e) {
+                console.error(`[Functions] Failed to parse JSON for ${functionId}:`, e);
+                console.log(`[Functions] Raw Response:`, execution.responseBody);
+                return { success: false, error: 'Invalid JSON response from function' };
             }
-        } else if (execution.status === 'failed') {
-            console.error(`[Functions] Execution failed for ${functionId}:`, execution);
-            return {
-                success: false,
-                error: execution.errors || 'Function execution failed'
-            };
-        } else {
-            console.error(`[Functions] Unexpected status for ${functionId}:`, execution.status, execution);
         }
 
-        return { success: false, error: `Unexpected status: ${execution.status}` };
+        if (execution.status === 'failed') {
+            console.error(`[Functions] Error for ${functionId}:`, execution.errors);
+            return { success: false, error: execution.errors || 'Function execution failed' };
+        }
 
-    } catch (error) {
-        console.error(`Function ${functionId} failed:`, error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-        };
+        console.error(`[Functions] Unexpected status for ${functionId}:`, execution);
+        return { success: false, error: `Unexpected status: ${execution.status}` };
+    } catch (error: any) {
+        console.error(`[Functions] Exception in callFunction for ${functionId}:`, error);
+        return { success: false, error: error.message || 'Failed to call function' };
     }
 }
 

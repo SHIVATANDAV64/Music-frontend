@@ -44,13 +44,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function fetchUserProfile(userId: string) {
+        console.log('[Auth] fetchUserProfile started for:', userId);
+        console.log('[Auth] Using Configured DATABASE_ID:', DATABASE_ID);
+        console.log('[Auth] Using Configured COLLECTION_USERS:', COLLECTIONS.USERS);
         try {
+            console.log('[Auth] Getting document from:', DATABASE_ID, COLLECTIONS.USERS, userId);
             const profile = await databases.getDocument(
                 DATABASE_ID,
                 COLLECTIONS.USERS,
                 userId
             ) as unknown as User;
 
+            console.log('[Auth] fetchUserProfile success:', profile);
             setState({
                 user: profile,
                 isLoading: false,
@@ -63,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Try to recover by creating the profile if the session exists
             try {
                 const session = await account.get();
+                console.log('[Auth] Recovery: Found session for recovery:', session.$id);
                 if (session && session.$id === userId) {
                     console.log('[Auth] Valid session exists, attempting to create missing profile...');
                     // Attempt to create the missing document
@@ -76,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         }
                     );
 
+                    console.log('[Auth] Recovery: Document created, retrying fetch...');
                     // Retry fetch
                     const newProfile = await databases.getDocument(
                         DATABASE_ID,
@@ -88,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         isLoading: false,
                         isAuthenticated: true,
                     });
+                    console.log('[Auth] Recovery: Success');
                     return;
                 }
             } catch (recoveryError) {
@@ -102,15 +110,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function signup(email: string, password: string, username: string) {
+        console.log('[Auth] Signup started for:', email);
         try {
             // Create account
+            console.log('[Auth] Creating account...');
             const newAccount = await account.create(ID.unique(), email, password, username);
             if (!newAccount || !newAccount.$id) {
                 throw new Error('Account creation failed - no ID returned');
             }
+            console.log('[Auth] Account created with ID:', newAccount.$id);
 
             // Create session
+            console.log('[Auth] Creating session...');
             await account.createEmailPasswordSession(email, password);
+            console.log('[Auth] Session created.');
 
             // Create user profile in database - STRICT REQUIREMENT
             if (!DATABASE_ID || !COLLECTIONS.USERS) {
@@ -118,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             try {
+                console.log('[Auth] Creating user profile in DB...');
                 await databases.createDocument(
                     DATABASE_ID,
                     COLLECTIONS.USERS,
@@ -127,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         is_admin: false,
                     }
                 );
+                console.log('[Auth] User profile created in DB.');
             } catch (dbError) {
                 console.error('[Auth] Failed to create user profile in DB:', dbError);
                 // If this fails, we effectively have a broken user. 
@@ -135,8 +150,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             await fetchUserProfile(newAccount.$id);
-        } catch (error) {
+            console.log('[Auth] Signup process complete.');
+        } catch (error: any) {
             console.error('Signup error:', error);
+
+            // Helpful hint for misconfigured endpoints
+            if (error.message && error.message.includes('<!doctype')) {
+                console.error('[Appwrite CRITICAL] The server returned HTML instead of JSON. This ALMOST ALWAYS means your VITE_APPWRITE_ENDPOINT is pointed to your website URL instead of the Appwrite API. Please check your environment variables.');
+            }
+
             // Ensure we don't leave a half-baked session
             await logout();
             throw error;
@@ -144,24 +166,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function login(email: string, password: string) {
+        console.log('[Auth] Login started for:', email);
         try {
             // Clear any existing session first
             try {
+                console.log('[Auth] Cleaning up old session...');
                 await account.deleteSession('current');
             } catch {
                 // No existing session - that's fine
             }
 
+            console.log('[Auth] Creating new session...');
             await account.createEmailPasswordSession(email, password);
+
+            console.log('[Auth] Verifying session...');
             // Verify session immediately
             const session = await account.get();
+            console.log('[Auth] Session verified:', session.$id);
             if (!session || !session.$id) {
+                // Check if we got an empty response that might be masked
                 throw new Error('Failed to retrieve session after login');
             }
 
             await fetchUserProfile(session.$id);
-        } catch (error) {
+            console.log('[Auth] Login process complete');
+        } catch (error: any) {
             console.error('Login error:', error);
+
+            // Helpful hint for misconfigured endpoints
+            if (error.message && error.message.includes('<!doctype')) {
+                console.error('[Appwrite CRITICAL] The server returned HTML instead of JSON. This ALMOST ALWAYS means your VITE_APPWRITE_ENDPOINT is pointed to your website URL instead of the Appwrite API. Please check your environment variables.');
+            }
+
             await logout();
             throw error;
         }

@@ -26,16 +26,21 @@ export function Login() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        console.log('[Login] handleSubmit started');
         setError('');
         setIsLoading(true);
 
         try {
+            console.log('[Login] Calling auth.login...');
             await login(email, password);
+            console.log('[Login] auth.login success, navigating to /home');
             navigate('/home');
         } catch (err: any) {
+            console.error('[Login] handleSubmit error:', err);
             setError(err.message || 'Invalid email or password');
         } finally {
             setIsLoading(false);
+            console.log('[Login] handleSubmit finished');
         }
     }
 
