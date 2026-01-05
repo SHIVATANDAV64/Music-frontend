@@ -39,7 +39,7 @@ export function Sidebar() {
 
             {/* Navigation - Fibonacci: 21px horizontal, 8px vertical */}
             <nav className="flex-1 px-[21px] space-y-[8px] overflow-y-auto">
-                <NavItem to="/" icon={Home} label="Home" />
+                <NavItem to="/home" icon={Home} label="Home" />
                 <NavItem to="/search" icon={Search} label="Discover" />
                 <NavItem to="/music" icon={Music} label="Library" />
 

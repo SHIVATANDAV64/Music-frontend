@@ -1,7 +1,5 @@
-/**
- * Appwrite Functions API Utility
- * All function IDs come from environment variables - NEVER hardcoded
- */
+import { Functions, ExecutionMethod } from 'appwrite';
+import { client } from './appwrite';
 
 // Function IDs from environment variables
 const FUNCTION_IDS = {
@@ -17,6 +15,9 @@ const FUNCTION_IDS = {
 
 export type FunctionId = string;
 
+// Initialize Appwrite Functions SDK
+const functions = new Functions(client);
+
 // Response types
 export interface FunctionResponse<T = unknown> {
     success: boolean;
@@ -26,12 +27,9 @@ export interface FunctionResponse<T = unknown> {
     hasMore?: boolean;
 }
 
-// Get Appwrite config from environment
-const ENDPOINT = import.meta.env.VITE_APPWRITE_ENDPOINT;
-const PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
-
 /**
- * Execute an Appwrite Function
+ * Execute an Appwrite Function using the SDK
+ * The SDK automatically handles session authentication
  * @param functionId - The function ID from environment variable
  * @param body - Request body
  * @returns Typed response from the function
@@ -45,48 +43,35 @@ export async function callFunction<T>(
         return { success: false, error: 'Function ID not configured' };
     }
 
-    const url = `${ENDPOINT}/functions/${functionId}/executions`;
-
     try {
-        const sessionToken = localStorage.getItem('appwrite_session');
+        // Use Appwrite SDK - it automatically handles session/JWT
+        const execution = await functions.createExecution(
+            functionId,
+            JSON.stringify(body), // body
+            false, // async
+            '/', // path
+            ExecutionMethod.POST // method - use enum
+        );
 
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-            'X-Appwrite-Project': PROJECT_ID,
-        };
-
-        if (sessionToken) {
-            headers['X-Appwrite-Session'] = sessionToken;
-        }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                body: JSON.stringify(body),
-                async: false,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Function execution failed: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.responseBody) {
+        // Check if execution completed successfully
+        if (execution.status === 'completed') {
             try {
-                return JSON.parse(result.responseBody);
+                const response = JSON.parse(execution.responseBody || '{}');
+                return response;
             } catch {
                 return { success: false, error: 'Failed to parse function response' };
             }
+        } else if (execution.status === 'failed') {
+            return {
+                success: false,
+                error: execution.errors || 'Function execution failed'
+            };
         }
 
-        return { success: false, error: 'No response from function' };
+        return { success: false, error: `Unexpected status: ${execution.status}` };
 
     } catch (error) {
-        console.error(`Function call failed:`, error);
+        console.error(`Function ${functionId} failed:`, error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
