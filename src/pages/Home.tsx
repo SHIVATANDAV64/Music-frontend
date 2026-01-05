@@ -8,20 +8,22 @@
  * should they remember?" - The feeling of music becoming visible.
  */
 import { useEffect, useState, useRef } from 'react';
-import { Play, ArrowRight, Headphones } from 'lucide-react';
+import { Play, ArrowRight, Headphones, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MusicCard } from '../components/cards';
 import { CymaticsVisualizer, AmbientGlow, VisualizerToggle } from '../components/ui';
-import { musicService, podcastService } from '../services';
+import { musicService, podcastService, historyService } from '../services';
 import { usePlayer } from '../context/PlayerContext';
 import { storage, BUCKETS } from '../lib/appwrite';
 import type { Track, Podcast } from '../types';
+import type { RecentlyPlayedItem } from '../services/history.service';
 
 export function Home() {
     const { play, isPlaying, currentTrack, setQueue } = usePlayer();
     const [tracks, setTracks] = useState<Track[]>([]);
     const [featured, setFeatured] = useState<Track | null>(null);
     const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+    const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('chladni');
     const heroRef = useRef<HTMLDivElement>(null);
@@ -29,13 +31,15 @@ export function Home() {
     useEffect(() => {
         async function loadData() {
             try {
-                const [trackData, podcastData] = await Promise.all([
+                const [trackData, podcastData, historyData] = await Promise.all([
                     musicService.getTracks({ limit: 8 }),
                     podcastService.getPodcasts({ limit: 4 }),
+                    historyService.getRecentlyPlayed(10),
                 ]);
                 setTracks(trackData);
                 setFeatured(trackData[0] || null);
                 setPodcasts(podcastData);
+                setRecentlyPlayed(historyData);
 
                 // Set queue for Spotify-like navigation - enables next/previous to work
                 if (trackData.length > 0) {
@@ -146,6 +150,43 @@ export function Home() {
                     <div className="w-px h-8 bg-gradient-to-b from-[#fafaf5]/30 to-transparent" />
                 </div>
             </section>
+
+            {/* ═══════════════════════════════════════════════════════════════
+                RECENTLY PLAYED - Continue where you left off
+            ═══════════════════════════════════════════════════════════════ */}
+            {recentlyPlayed.length > 0 && (
+                <section className="py-16 px-8 md:px-12 lg:px-16 bg-[#0d0d0d]">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="flex items-center gap-3 mb-8">
+                            <Clock size={20} className="text-[#c9a962]" />
+                            <h2 className="text-xl md:text-2xl font-serif text-[#fafaf5]">
+                                Recently Played
+                            </h2>
+                        </div>
+
+                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                            {recentlyPlayed.map((item) => (
+                                <div
+                                    key={item.$id}
+                                    className="flex-shrink-0 w-40 p-4 rounded-xl bg-[#111111] border border-white/5 hover:border-[#c9a962]/30 transition-colors cursor-pointer group"
+                                >
+                                    <div className="aspect-square rounded-lg overflow-hidden mb-3 bg-[#1a1a1a] flex items-center justify-center">
+                                        <Headphones size={32} className="text-[#fafaf5]/20 group-hover:text-[#c9a962]/50 transition-colors" />
+                                    </div>
+                                    <p className="text-xs text-[#fafaf5]/60 truncate">
+                                        {item.track_id ? 'Track' : 'Episode'}: {item.track_id || item.episode_id}
+                                    </p>
+                                    {item.resume_position > 0 && (
+                                        <p className="text-xs text-[#c9a962] mt-1">
+                                            Resume at {Math.floor(item.resume_position / 60)}:{String(Math.floor(item.resume_position % 60)).padStart(2, '0')}
+                                        </p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* ═══════════════════════════════════════════════════════════════
                 RECENT TRACKS - Cards that breathe

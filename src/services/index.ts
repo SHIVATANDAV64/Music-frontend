@@ -6,3 +6,4 @@ export { musicService } from './musicService';
 export { podcastService } from './podcast.service';
 export { playlistService } from './playlist.service';
 export { favoritesService } from './favorites.service';
+export { historyService } from './history.service';

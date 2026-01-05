@@ -3,7 +3,8 @@
  * Global audio player state management with Spotify-like queue functionality
  */
 import { createContext, useContext, useReducer, useRef, useEffect, type ReactNode } from 'react';
-import { storage, BUCKETS, getProxiedAudioUrl } from '../lib/appwrite';
+import { storage, BUCKETS, getProxiedAudioUrlSync } from '../lib/appwrite';
+import { historyService } from '../services';
 import type { PlayableItem, PlayerState } from '../types';
 
 // Action types
@@ -208,9 +209,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             let audioUrl: string;
 
             if ('audio_url' in state.currentTrack && state.currentTrack.audio_url) {
-                // Jamendo or external API tracks - proxy through Appwrite for CORS
-                // This enables Web Audio API visualization on cross-origin audio
-                audioUrl = getProxiedAudioUrl(state.currentTrack.audio_url);
+                // Jamendo or external API tracks - use original URL for playback
+                // Note: Web Audio API visualization may be limited due to CORS on external sources
+                audioUrl = getProxiedAudioUrlSync(state.currentTrack.audio_url);
             } else if ('audio_file_id' in state.currentTrack && state.currentTrack.audio_file_id) {
                 // Appwrite uploaded tracks - direct access, full visualization support
                 audioUrl = storage.getFileView(BUCKETS.AUDIO, state.currentTrack.audio_file_id).toString();
@@ -229,7 +230,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
             audioRef.current.load(); // Explicitly load the new source
             audioRef.current.play()
-                .then(() => dispatch({ type: 'PLAY' }))
+                .then(() => {
+                    dispatch({ type: 'PLAY' });
+                    // Record this play in history
+                    const isEpisode = 'episode_id' in state.currentTrack!;
+                    const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
+                    historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource);
+                })
                 .catch((err) => {
                     console.error('Failed to play audio:', err);
                     // If autoplay fails, user interaction is required
@@ -249,6 +256,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
 
     function pause() {
+        // Save position before pausing
+        if (state.currentTrack && audioRef.current) {
+            const isEpisode = 'episode_id' in state.currentTrack;
+            historyService.updatePosition(state.currentTrack.$id, audioRef.current.currentTime, isEpisode);
+        }
         audioRef.current?.pause();
         dispatch({ type: 'PAUSE' });
     }

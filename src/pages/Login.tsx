@@ -24,7 +24,7 @@ export function Login() {
 
         try {
             await login(email, password);
-            navigate('/');
+            navigate('/home');
         } catch (err: any) {
             setError(err.message || 'Invalid email or password');
         } finally {

@@ -31,7 +31,7 @@ export function Register() {
 
         try {
             await signup(email, password, username);
-            navigate('/');
+            navigate('/home');
         } catch (err: any) {
             setError(err.message || 'Failed to create account');
         } finally {
