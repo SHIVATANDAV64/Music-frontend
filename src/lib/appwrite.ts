@@ -8,9 +8,6 @@ import { Client, Account, Databases, Storage, Functions, ID, Query } from 'appwr
 const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 
-console.log('[Appwrite DEBUG] Endpoint:', endpoint);
-console.log('[Appwrite DEBUG] Project ID:', projectId);
-
 // Endpoint Validation
 if (!endpoint) {
     console.error('[Appwrite ERROR] VITE_APPWRITE_ENDPOINT is missing!');
@@ -111,55 +108,33 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
                 return originalUrl;
             }
 
-            console.log('[AudioProxy] Executing proxy function for:', originalUrl.substring(0, 50) + '...');
+            console.log('[AudioProxy] Executing proxy function...');
 
-            // Use the SDK instead of manual fetch to ensure Project/Session headers are included
             const execution = await functions.createExecution(
                 functionId,
-                JSON.stringify({ url: originalUrl }),
-                false // synchronous execution
+                '', // No body needed
+                false, // synchronous execution
+                `/?url=${encodeURIComponent(originalUrl)}`
             );
 
-            if (execution.status !== 'completed') {
-                console.error('[AudioProxy] Function execution failed:', execution);
-                if (execution.status === 'failed') {
-                    console.error('[AudioProxy] Function Error:', execution.errors);
-                }
-                throw new Error(`Proxy execution failed with status: ${execution.status}`);
+            if (execution.status !== 'completed' || !execution.responseBody) {
+                throw new Error(`Proxy failed: ${execution.status}`);
             }
 
-            // The function returns the audio data in execution.responseBody
-            // Our function uses res.send(audioData), which Appwrite Cloud handles.
-
-            // If the response is empty or indicates error
-            if (!execution.responseBody) {
-                throw new Error('Proxy returned empty response');
+            // Parse the response to get the fileId
+            const result = JSON.parse(execution.responseBody);
+            if (!result.success || !result.fileId) {
+                throw new Error(result.error || 'Proxy failed to return file ID');
             }
 
-            // Most Appwrite functions return binary as base64 in the responseBody if using res.send()
-            let audioBlob: Blob;
-            try {
-                // Try to decode as base64
-                const binaryString = atob(execution.responseBody);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-            } catch {
-                // If not base64, assume it's the raw string (UTF-8)
-                audioBlob = new Blob([execution.responseBody], { type: 'audio/mpeg' });
-            }
-
-            // Create a blob URL (same-origin, enables Web Audio API)
-            const blobUrl = URL.createObjectURL(audioBlob);
-
-            // Cache it
+            // Generate a stable Storage View URL (this has native CORS support)
+            const blobUrl = storage.getFileView(BUCKETS.AUDIO, result.fileId).toString();
             audioProxyCache.set(originalUrl, blobUrl);
 
-            console.log('[AudioProxy] Created blob URL:', blobUrl.substring(0, 50) + '...');
-
+            console.log('[AudioProxy] Success: Visualization enabled via Storage Cache.');
             return blobUrl;
+
+
         } catch (error: any) {
             console.error('[AudioProxy] Proxy failed:', error);
 

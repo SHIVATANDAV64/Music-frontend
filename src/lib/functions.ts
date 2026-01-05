@@ -46,41 +46,50 @@ export async function callFunction<T>(
     functionId: string,
     body: object = {}
 ): Promise<FunctionResponse<T>> {
-    if (!functionId) {
-        console.error('Function ID not configured in environment variables');
-        return { success: false, error: 'Function ID not configured' };
-    }
-
     try {
-        // Use Appwrite SDK - it automatically handles session/JWT
         const execution = await functions.createExecution(
             functionId,
             JSON.stringify(body),
             false // async = false
         );
 
-        console.log(`[Functions] Result for ${functionId}:`, execution.status);
-
         if (execution.status === 'completed') {
             try {
+                if (!execution.responseBody) {
+                    return { success: true, data: null as any };
+                }
                 const response = JSON.parse(execution.responseBody);
                 return { success: true, data: response as T };
             } catch (e) {
-                console.error(`[Functions] Failed to parse JSON for ${functionId}:`, e);
-                console.log(`[Functions] Raw Response:`, execution.responseBody);
+                console.error(`[Functions] Parse error for ${functionId}:`, e);
+                console.debug(`[Functions] Raw response:`, execution.responseBody);
                 return { success: false, error: 'Invalid JSON response from function' };
             }
         }
 
         if (execution.status === 'failed') {
-            console.error(`[Functions] Error for ${functionId}:`, execution.errors);
+            console.error(`[Functions] ${functionId} FAILED:`, execution.errors);
             return { success: false, error: execution.errors || 'Function execution failed' };
         }
 
-        console.error(`[Functions] Unexpected status for ${functionId}:`, execution);
-        return { success: false, error: `Unexpected status: ${execution.status}` };
+        // Handle cases like 'waiting', 'processing' which shouldn't happen for sync calls
+        console.warn(`[Functions] ${functionId} returned unexpected status: ${execution.status}`);
+        return { success: false, error: `Function returned status: ${execution.status}` };
     } catch (error: any) {
-        console.error(`[Functions] Exception in callFunction for ${functionId}:`, error);
+        // Detailed logging for CORS/503 errors
+        console.error(`[Functions] Exception calling ${functionId}:`, {
+            message: error.message,
+            code: error.code,
+            type: error.type
+        });
+
+        if (error.message?.includes('fetch') || error.code === 503) {
+            return {
+                success: false,
+                error: 'Service currently unavailable. Please check your Appwrite Console for function health or CORS settings.'
+            };
+        }
+
         return { success: false, error: error.message || 'Failed to call function' };
     }
 }

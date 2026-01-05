@@ -32,12 +32,14 @@ export const podcastService = {
             offset: options?.offset,
         });
 
-        if (!response.success) {
+        if (!response.success || !response.data) {
             console.error('Failed to get podcasts:', response.error);
             return [];
         }
 
-        return (response.data || []) as unknown as Podcast[];
+        // Handle both direct array and { success, data } patterns
+        const data = (response.data as any).data || response.data;
+        return (Array.isArray(data) ? data : []) as unknown as Podcast[];
     },
 
     /**

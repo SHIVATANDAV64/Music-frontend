@@ -45,8 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function fetchUserProfile(userId: string) {
         console.log('[Auth] fetchUserProfile started for:', userId);
-        console.log('[Auth] Using Configured DATABASE_ID:', DATABASE_ID);
-        console.log('[Auth] Using Configured COLLECTION_USERS:', COLLECTIONS.USERS);
         try {
             console.log('[Auth] Getting document from:', DATABASE_ID, COLLECTIONS.USERS, userId);
             const profile = await databases.getDocument(

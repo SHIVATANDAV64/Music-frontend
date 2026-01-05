@@ -65,6 +65,19 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        // CRITICAL CORS SAFETY CHECK:
+        // Connecting a MediaElementSource to a cross-origin URL (like Jamendo's CDN) 
+        // without proper CORS headers will cause the browser to silence the audio 
+        // (outputs zeroes) for security.
+        // We MUST skip initialization if the URL is external and not yet proxied.
+        const isProxied = audioElement.src.startsWith('blob:');
+        const isExternal = audioElement.src.includes('jamendo.com');
+
+        if (isExternal && !isProxied) {
+            console.log('[AudioAnalyzerContext] Skipping initialization for cross-origin URL to prevent silence. Waiting for proxy...');
+            return;
+        }
+
         try {
             // Create audio context (Safari needs webkitAudioContext)
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -78,6 +91,8 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
             analyzerRef.current = analyzer;
 
             // Create source from audio element - THIS CAN ONLY BE DONE ONCE
+            // If we do this on a Jamendo URL, it will be silenced. 
+            // By waiting for the blob: URL, we ensure it's safe.
             const source = audioContext.createMediaElementSource(audioElement);
             sourceRef.current = source;
             connectionAttemptedRef.current = true;
@@ -93,10 +108,9 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
 
             setIsInitialized(true);
 
-            console.log('[AudioAnalyzerContext] Initialized successfully', {
+            console.log('[AudioAnalyzerContext] Initialized successfully with safe source', {
                 fftSize: analyzer.fftSize,
-                bufferLength,
-                sampleRate: audioContext.sampleRate,
+                src: audioElement.src.substring(0, 30) + '...',
             });
         } catch (error) {
             console.error('[AudioAnalyzerContext] Failed to initialize:', error);

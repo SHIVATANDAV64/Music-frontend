@@ -33,11 +33,16 @@ export function Search() {
                     musicService.getTracks({ search: query }),
                     podcastService.getPodcasts(),
                 ]);
-                setTracks(trackResults);
-                // Filter podcasts client-side since Appwrite search is limited
-                setPodcasts(podcastResults.filter(p =>
-                    p.title.toLowerCase().includes(query.toLowerCase()) ||
-                    p.author.toLowerCase().includes(query.toLowerCase())
+                // Safely handle results
+                setTracks(Array.isArray(trackResults) ? trackResults : []);
+
+                // Podcasts might be nested in { data: [] } or just be the array itself
+                const rawPodcasts = (podcastResults as any)?.data || podcastResults;
+                const podcastArray = Array.isArray(rawPodcasts) ? rawPodcasts : [];
+
+                setPodcasts(podcastArray.filter((p: any) =>
+                    p && p.title?.toLowerCase().includes(query.toLowerCase()) ||
+                    p.author?.toLowerCase().includes(query.toLowerCase())
                 ));
             } catch (error) {
                 console.error('Search failed:', error);
