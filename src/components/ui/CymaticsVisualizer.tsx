@@ -182,9 +182,25 @@ export function CymaticsVisualizer({
                 const alpha = particle.life * (0.3 + volume * 0.7);
                 const size = PARTICLE_SIZE_MULTIPLIER + volume * 1.5;
 
-                const r = Math.floor(201 + trebleEnergy * 54);
-                const g = Math.floor(169 + midEnergy * 86);
-                const b = Math.floor(98 + bassEnergy * 50);
+                // Organic Ink / Gold / Sand Palette
+                // R: 212, G: 175, B: 55 (Gold)
+                // R: 42, G: 59, B: 85 (Deep Ink Blue)
+                // R: 200, G: 200, B: 190 (Sand/Paper)
+
+                let r, g, b;
+
+                if (mode === 'chladni') {
+                    // Gold Sand
+                    r = 212; g = 175; b = 55;
+                } else if (mode === 'water') {
+                    // Deep Ink
+                    r = 100 + (trebleEnergy * 100);
+                    g = 149 + (midEnergy * 50);
+                    b = 237;
+                } else {
+                    // Sacred Geometry - White/Paper
+                    r = 230; g = 230; b = 230;
+                }
 
                 ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 ctx.beginPath();
@@ -193,12 +209,14 @@ export function CymaticsVisualizer({
             });
 
             if (volume > 0.4) {
+                // Subtle central glow, not overwhelming
                 const gradient = ctx.createRadialGradient(
                     centerX, centerY, 0,
-                    centerX, centerY, 100 * volume
+                    centerX, centerY, 150 * volume
                 );
-                gradient.addColorStop(0, `rgba(201, 169, 98, ${(volume - 0.4) * 0.25})`);
-                gradient.addColorStop(1, 'rgba(201, 169, 98, 0)');
+                // Gold bloom
+                gradient.addColorStop(0, `rgba(212, 175, 55, ${(volume - 0.4) * 0.15})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, width, height);
             }

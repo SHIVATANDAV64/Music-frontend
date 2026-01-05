@@ -6,9 +6,11 @@
  * No overlays cluttering the art - it needs to breathe.
  */
 import { useState } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Heart, Plus } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { getTrackCoverUrl } from '../../utils/trackUtils';
+import { favoritesService } from '../../services/favorites.service';
+import { useAuth } from '../../context/AuthContext';
 import type { Track } from '../../types';
 
 interface MusicCardProps {
@@ -16,8 +18,11 @@ interface MusicCardProps {
 }
 
 export function MusicCard({ track }: MusicCardProps) {
-    const { currentTrack, isPlaying, play, pause, resume } = usePlayer();
+    const { currentTrack, isPlaying, play, pause, resume, addToQueue } = usePlayer();
+    const { user } = useAuth();
     const [isHovered, setIsHovered] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isAddingFavorite, setIsAddingFavorite] = useState(false);
 
     const isCurrentTrack = currentTrack?.$id === track.$id;
     const isPlayingThis = isCurrentTrack && isPlaying;
@@ -32,6 +37,27 @@ export function MusicCard({ track }: MusicCardProps) {
         } else {
             play(track);
         }
+    }
+
+    async function handleFavoriteClick(e: React.MouseEvent) {
+        e.stopPropagation();
+        if (!user || isAddingFavorite) return;
+
+        setIsAddingFavorite(true);
+        try {
+            // Use toggleFavorite with correct signature: (userId, Track)
+            const newState = await favoritesService.toggleFavorite(user.$id, track);
+            setIsFavorite(newState);
+        } catch (err) {
+            console.error('Failed to toggle favorite:', err);
+        } finally {
+            setIsAddingFavorite(false);
+        }
+    }
+
+    function handleAddToQueue(e: React.MouseEvent) {
+        e.stopPropagation();
+        addToQueue(track);
     }
 
     return (
@@ -53,7 +79,7 @@ export function MusicCard({ track }: MusicCardProps) {
                 style={{
                     boxShadow: isPlayingThis
                         ? '0 8px 32px rgba(201, 169, 98, 0.2)'
-                        : '0 8px 32px rgba(0, 0, 0, 0.3)',
+                        : '0 8px 32px rgba(255, 255, 255, 0.3)',
                 }}
             >
                 {coverUrl ? (
@@ -78,23 +104,51 @@ export function MusicCard({ track }: MusicCardProps) {
                     style={{ opacity: isHovered || isPlayingThis ? 1 : 0 }}
                 />
 
-                {/* Play Button - Appears on hover, bottom right */}
-                <button
-                    onClick={handlePlayClick}
-                    className="absolute bottom-3 right-3 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg"
+                {/* Action Buttons Row - Appears on hover */}
+                <div
+                    className="absolute bottom-3 right-3 flex items-center gap-2 transition-all duration-300"
                     style={{
-                        background: '#c9a962',
                         opacity: isHovered || isPlayingThis ? 1 : 0,
-                        transform: isHovered || isPlayingThis ? 'scale(1)' : 'scale(0.8)',
+                        transform: isHovered || isPlayingThis ? 'translateY(0)' : 'translateY(8px)',
                     }}
-                    aria-label={isPlayingThis ? 'Pause' : 'Play'}
                 >
-                    {isPlayingThis ? (
-                        <Pause size={20} fill="#0a0a0a" className="text-[#0a0a0a]" />
-                    ) : (
-                        <Play size={20} fill="#0a0a0a" className="text-[#0a0a0a] ml-0.5" />
-                    )}
-                </button>
+                    {/* Add to Queue */}
+                    <button
+                        onClick={handleAddToQueue}
+                        className="w-9 h-9 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+                        aria-label="Add to queue"
+                        title="Add to queue"
+                    >
+                        <Plus size={16} className="text-white" />
+                    </button>
+
+                    {/* Favorite */}
+                    <button
+                        onClick={handleFavoriteClick}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${isFavorite
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-white/10 text-white hover:bg-white/20'
+                            }`}
+                        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                        <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
+                    </button>
+
+                    {/* Play Button */}
+                    <button
+                        onClick={handlePlayClick}
+                        className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+                        style={{ background: '#c9a962' }}
+                        aria-label={isPlayingThis ? 'Pause' : 'Play'}
+                    >
+                        {isPlayingThis ? (
+                            <Pause size={20} fill="#0a0a0a" className="text-[#0a0a0a]" />
+                        ) : (
+                            <Play size={20} fill="#0a0a0a" className="text-[#0a0a0a] ml-0.5" />
+                        )}
+                    </button>
+                </div>
 
                 {/* Now Playing Indicator - Minimal, top left */}
                 {isPlayingThis && (
@@ -131,3 +185,4 @@ export function MusicCard({ track }: MusicCardProps) {
         </div>
     );
 }
+

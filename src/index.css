@@ -16,7 +16,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 /* ==========================================================================
-   DESIGN TOKENS
+/* ==========================================================================
+   DESIGN TOKENS - PAPER & INK SYSTEM
    ========================================================================== */
 
 :root {
@@ -33,157 +34,95 @@
   --space-89: 89px;
 
   /* ─────────────────────────────────────────────────────────────────────────
-     GOLDEN RATIO TYPOGRAPHY (Base 16px, φ = 1.618)
-     ───────────────────────────────────────────────────────────────────────── */
-  --text-xs: 0.618rem;
-  /* ~10px */
-  --text-sm: 0.875rem;
-  /* 14px */
-  --text-base: 1rem;
-  /* 16px */
-  --text-lg: 1.125rem;
-  /* 18px */
-  --text-xl: 1.618rem;
-  /* ~26px - φ */
-  --text-2xl: 2.618rem;
-  /* ~42px - φ² */
-  --text-3xl: 4.236rem;
-  /* ~68px - φ³ */
-
-  /* ─────────────────────────────────────────────────────────────────────────
-     SACRED PROPORTION - Layout
-     Sidebar : Content = 1 : 1.618 (Golden Ratio)
-     ───────────────────────────────────────────────────────────────────────── */
-  --sidebar-width: 280px;
-  --golden-ratio: 1.618;
-
-  /* ─────────────────────────────────────────────────────────────────────────
-     COLOR PALETTE - Forest at Dusk
-     "Standing in a forest clearing at dusk, golden light filtering through trees"
-     ───────────────────────────────────────────────────────────────────────── */
-
-  /* Foundation - Night Sky */
-  --bg-deep: #0a0a0a;
-  --bg-card: #111111;
-  --bg-elevated: #161616;
-  --bg-hover: #1a1a1a;
-
-  /* Primary - Sunlight Through Leaves (Interactive, alive) */
-  --gold: #c9a962;
-  --gold-light: #e4d5a8;
-  --gold-muted: rgba(201, 169, 98, 0.15);
-  --gold-glow: rgba(201, 169, 98, 0.25);
-
-  /* Secondary - Autumn Earth (Accent depth) */
-  --amber: #8b6914;
-
-  /* Tertiary - Forest Undergrowth (Optional secondary) */
-  --sage: #4a5e4a;
-  --sage-muted: rgba(74, 94, 74, 0.2);
-
-  /* Text - Moonlight */
-  --text-primary: #fafaf5;
-  --text-secondary: #8a8a85;
-  --text-muted: #555550;
-
-  /* ─────────────────────────────────────────────────────────────────────────
-     ACOUSTIC COLORS - For visualizer mood response
-     Calm/Ambient → blue-grey
-     Energetic → warm gold
-     Melancholy → muted purple
-     ───────────────────────────────────────────────────────────────────────── */
-  --mood-calm: #3d4f5f;
-  --mood-energy: #c9a962;
-  --mood-melancholy: #5a4a5e;
-
-  /* ─────────────────────────────────────────────────────────────────────────
-     TYPOGRAPHY
+     TYPOGRAPHY - Editorial
      ───────────────────────────────────────────────────────────────────────── */
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
-  /* ─────────────────────────────────────────────────────────────────────────
-     SHADOWS - Depth like forest layers (Material Honesty)
-     ───────────────────────────────────────────────────────────────────────── */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --shadow-gold: 0 0 32px var(--gold-glow);
+  --text-xs: 0.7rem;
+  --text-sm: 0.85rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.8rem;
+  --text-2xl: 2.8rem;
+  --text-3xl: 4.5rem;
 
   /* ─────────────────────────────────────────────────────────────────────────
-     MOTION - Organic, like nature
+     LAYOUT
      ───────────────────────────────────────────────────────────────────────── */
-  --ease-organic: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-breath: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-quick: 150ms;
-  --duration-natural: 300ms;
-  --duration-slow: 500ms;
-  --duration-breath: 2000ms;
+  --sidebar-width: 280px;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     COLOR PALETTE - Ink on Paper
+     ───────────────────────────────────────────────────────────────────────── */
+
+  /* Backgrounds */
+  --bg-deep: #0e0e0e;
+  /* Rich Black Ink */
+  --bg-paper: #161616;
+  /* Dark Charcoal Paper */
+  --bg-surface: #1e1e1e;
+  /* Matte Card Surface */
+  --bg-hover: #252525;
+  /* Slightly lighter ink */
+
+  /* Accents - Organic Pigments */
+  --gold: #d4af37;
+  /* Antique Gold Leaf */
+  --gold-dim: #8a7530;
+  /* Aged Gold */
+  --ink-blue: #2a3b55;
+  /* Deep Indigo Ink */
+  --clay: #8a5a44;
+  /* Terracotta */
+
+  /* Text */
+  --text-primary: #e6e6e6;
+  /* Off-white paper */
+  --text-secondary: #999999;
+  /* Graphite */
+  --text-muted: #666666;
+  /* Faded Ink */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SHADOWS & DEPTH - Tactile
+     ───────────────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-paper: 0 4px 20px rgba(0, 0, 0, 0.5);
+  /* Soft, diffuse */
+  --shadow-deep: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --glow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     ANIMATION
+     ───────────────────────────────────────────────────────────────────────── */
+  --ease-paper: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Snappy but smooth */
+  --duration-normal: 0.3s;
 }
 
 /* ==========================================================================
-   BASE STYLES
-   ========================================================================== */
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  -webkit-font-smoothing: antialiased;
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: var(--font-body);
-  background: var(--bg-deep);
-  color: var(--text-primary);
-  line-height: 1.618;
-  /* Golden ratio line height */
-  margin: 0;
-  min-height: 100vh;
-}
-
-/* Headings - Serif for warmth */
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  line-height: 1.2;
-  color: var(--text-primary);
-}
-
-h1 {
-  font-size: var(--text-3xl);
-}
-
-h2 {
-  font-size: var(--text-2xl);
-}
-
-h3 {
-  font-size: var(--text-xl);
-}
-
-h4 {
-  font-size: var(--text-lg);
-}
-
-/* ==========================================================================
-   GRAIN OVERLAY - Texture for tactile feel (Material Honesty)
+   TEXTURE OVERLAY - The "Paper" Feel
    ========================================================================== */
 
 #root::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: 0.03;
+  /* Grain texture - visible but not obstructive */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
   pointer-events: none;
-  z-index: 9998;
+  z-index: 1;
+  /* LOW z-index to not block anything */
   mix-blend-mode: overlay;
+  background-size: 200px 200px;
+}
+
+/* Surface Utility for Matte Cards */
+.bg-paper-texture {
+  background-color: var(--bg-surface);
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* ==========================================================================
@@ -197,10 +136,12 @@ h4 {
 .main-content {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
-  padding-top: calc(64px + var(--space-34)); /* Navbar height (64px) + spacing */
+  padding-top: calc(64px + var(--space-34));
+  /* Navbar height (64px) + spacing */
   padding-left: var(--space-34);
   padding-right: var(--space-34);
-  padding-bottom: 240px; /* Accounts for player height ~200px + extra spacing */
+  padding-bottom: 240px;
+  /* Accounts for player height ~200px + extra spacing */
 }
 
 @media (max-width: 1024px) {

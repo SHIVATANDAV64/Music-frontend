@@ -22,6 +22,7 @@ import {
   Profile,
   Favorites
 } from './pages';
+import History from './pages/History';
 
 // Initialize React Query client
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ function App() {
                   <Route path="/search" element={<Search />} />
                   <Route path="/playlists" element={<Playlists />} />
                   <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/history" element={<History />} />
                   <Route path="/profile" element={<Profile />} />
 
                   {/* Admin only route */}

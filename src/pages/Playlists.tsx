@@ -244,10 +244,27 @@ export function Playlists() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {playlistTracks.map((track) => (
-                                        <MusicCard key={track.$id} track={track} />
-                                    ))}
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                                    {Array.isArray(playlists) && playlists.length > 0 ? (
+                                        playlists.map((playlist) => (
+                                            <MusicCard
+                                                key={playlist.$id}
+                                                track={{
+                                                    $id: playlist.$id,
+                                                    title: playlist.name,
+                                                    artist: playlist.description || 'Playlist',
+                                                    albumArt: (playlist as any).cover || (playlist as any).image || '',
+                                                    duration: 0,
+                                                    audio_url: '',
+                                                    // Map other required fields or cast generic
+                                                } as any}
+                                            />
+                                        ))
+                                    ) : (
+                                        playlistTracks.map((track) => (
+                                            <MusicCard key={track.$id} track={track} />
+                                        ))
+                                    )}
                                 </div>
                             )}
                         </div>

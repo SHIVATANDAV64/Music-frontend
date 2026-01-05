@@ -2,7 +2,7 @@
  * Player Context
  * Global audio player state management with Spotify-like queue functionality
  */
-import { createContext, useContext, useReducer, useRef, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useRef, useEffect, useState, type ReactNode } from 'react';
 import { storage, BUCKETS, getProxiedAudioUrlSync, fetchProxiedAudioBlob, isAudioProxied } from '../lib/appwrite';
 import { historyService } from '../services';
 import type { PlayableItem, PlayerState } from '../types';
@@ -41,6 +41,7 @@ interface PlayerContextType extends PlayerState {
     toggleMoodLight: () => void;
     toggleFullscreen: () => void;
     toggleAudioCanvas: () => void;
+    audio: HTMLAudioElement;
     audioRef: React.RefObject<HTMLAudioElement | null>;
     showMoodLight: boolean;
     showFullscreen: boolean;
@@ -164,17 +165,43 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
     const [state, dispatch] = useReducer(playerReducer, initialState);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // Initialize audio element
+    // Use state for the audio element so components can react to instance swaps
+    const [audio, setAudio] = useState<HTMLAudioElement>(() => {
+        const a = new Audio();
+        a.volume = initialState.volume;
+        a.preload = 'auto'; // Improve initial buffering
+        return a;
+    });
+
+    // Provide a ref for legacy/compatibility
+    const audioRef = useRef<HTMLAudioElement | null>(audio);
+
+    // Sync ref with audio state
     useEffect(() => {
-        audioRef.current = new Audio();
-        audioRef.current.volume = state.volume;
+        audioRef.current = audio;
+    }, [audio]);
 
-        const audio = audioRef.current;
+    // Use ref for repeat to avoid recreating audio element
+    const repeatRef = useRef(state.repeat);
+    const shuffleRef = useRef(state.shuffle);
+    const isSeekingRef = useRef(false);
 
+    // Keep refs in sync with state
+    useEffect(() => {
+        repeatRef.current = state.repeat;
+    }, [state.repeat]);
+
+    useEffect(() => {
+        shuffleRef.current = state.shuffle;
+    }, [state.shuffle]);
+
+    // Unified function to attach listeners to an audio element
+    const attachAudioListeners = (audio: HTMLAudioElement) => {
         const handleTimeUpdate = () => {
-            dispatch({ type: 'SET_PROGRESS', payload: audio.currentTime });
+            if (!isSeekingRef.current) {
+                dispatch({ type: 'SET_PROGRESS', payload: audio.currentTime });
+            }
         };
 
         const handleLoadedMetadata = () => {
@@ -182,7 +209,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         };
 
         const handleEnded = () => {
-            if (state.repeat === 'one') {
+            if (repeatRef.current === 'one') {
                 audio.currentTime = 0;
                 audio.play();
             } else {
@@ -190,118 +217,204 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             }
         };
 
+        const handleCanPlay = () => {
+            const targetSeek = (audio as any)._targetSeek;
+            if (targetSeek !== undefined) {
+                console.log('[Player] Applying deferred seek to:', targetSeek);
+                audio.currentTime = targetSeek;
+                delete (audio as any)._targetSeek;
+            }
+        };
+
         audio.addEventListener('timeupdate', handleTimeUpdate);
         audio.addEventListener('loadedmetadata', handleLoadedMetadata);
         audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('canplay', handleCanPlay);
 
         return () => {
             audio.removeEventListener('timeupdate', handleTimeUpdate);
             audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
             audio.removeEventListener('ended', handleEnded);
-            audio.pause();
+            audio.removeEventListener('canplay', handleCanPlay);
         };
-    }, [state.repeat]);
+    };
+
+    // Initialize audio listeners whenever the audio element instance changes
+    useEffect(() => {
+        const cleanup = attachAudioListeners(audio);
+        return () => {
+            cleanup();
+            audio.pause();
+            audio.src = '';
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [audio]);
 
     // Play when track changes
     // Two-phase approach:
     // 1. Start playing immediately with original URL (fast playback)
     // 2. Fetch proxied blob URL in background (enables visualization)
     // 3. Switch to blob URL when ready (seamless, enables Web Audio API)
+    // Play when track changes
+    // Robust implementation with race condition handling
+    const playbackRequestId = useRef(0);
+    const playPromiseRef = useRef<Promise<void> | null>(null);
+
     useEffect(() => {
-        if (state.currentTrack && audioRef.current) {
-            let audioUrl: string;
-            let isExternalSource = false;
-            let originalExternalUrl: string | null = null;
+        if (state.currentTrack) {
+            const currentRequestId = ++playbackRequestId.current;
 
-            if ('audio_url' in state.currentTrack && state.currentTrack.audio_url) {
-                // Jamendo or external API tracks
-                originalExternalUrl = state.currentTrack.audio_url;
-                // Check if we already have a cached blob URL
-                audioUrl = getProxiedAudioUrlSync(originalExternalUrl);
-                isExternalSource = true;
-            } else if ('audio_file_id' in state.currentTrack && state.currentTrack.audio_file_id) {
-                // Appwrite uploaded tracks - direct access
-                audioUrl = storage.getFileView(BUCKETS.AUDIO, state.currentTrack.audio_file_id).toString();
-                isExternalSource = false;
-            } else {
-                console.error('No audio source available for track');
-                return;
-            }
+            const startPlayback = async () => {
+                // 1. Determine safe Audio URL
+                let audioUrl: string = '';
+                let isExternalSource = false;
+                let originalExternalUrl: string | null = null;
 
-            // For external sources: start with original URL, fetch proxy in background
-            // For Appwrite sources: set crossOrigin for immediate visualization
-            if (isExternalSource) {
-                // Check if blob URL is already cached
-                if (isAudioProxied(originalExternalUrl!)) {
-                    // Use cached blob URL - enables visualization
-                    audioRef.current.crossOrigin = 'anonymous';
-                } else {
-                    // Start without crossOrigin for immediate playback
-                    audioRef.current.removeAttribute('crossorigin');
+                try {
 
-                    // Fetch proxied blob in background for future visualization
-                    fetchProxiedAudioBlob(originalExternalUrl!).then((blobUrl) => {
-                        // If still playing the same track and we got a blob URL
-                        if (
-                            audioRef.current &&
-                            state.currentTrack &&
-                            'audio_url' in state.currentTrack &&
-                            state.currentTrack.audio_url === originalExternalUrl &&
-                            blobUrl !== originalExternalUrl
-                        ) {
-                            // Store current playback position
-                            const currentTime = audioRef.current.currentTime;
-                            const wasPlaying = !audioRef.current.paused;
+                    if ('audio_url' in state.currentTrack! && state.currentTrack.audio_url) {
+                        originalExternalUrl = state.currentTrack.audio_url;
+                        // Synchronously check if we have a proxied version ready
+                        audioUrl = getProxiedAudioUrlSync(originalExternalUrl);
+                        isExternalSource = true;
+                    } else if ('audio_file_id' in state.currentTrack! && state.currentTrack.audio_file_id) {
+                        audioUrl = storage.getFileView(BUCKETS.AUDIO, state.currentTrack.audio_file_id).toString();
+                        isExternalSource = false;
+                    } else {
+                        throw new Error('No audio source found');
+                    }
 
-                            // Switch to blob URL (enables visualization)
-                            console.log('[Player] Switching to proxied blob URL for visualization');
-                            audioRef.current.crossOrigin = 'anonymous';
-                            audioRef.current.src = blobUrl;
-                            audioRef.current.currentTime = currentTime;
+                    // 1. Determine if we need a fresh audio element to prevent silence
+                    // If the current element has been "captured" by AudioContext, it will be silent 
+                    // for any non-proxied jamendo tracks. We reset it to ensure playback works.
+                    let currentAudio = audio;
+                    const isElementCaptured = (currentAudio as any)._isCaptured;
 
-                            if (wasPlaying) {
-                                const playPromise = audioRef.current.play();
-                                if (playPromise !== undefined) {
-                                    playPromise.catch(error => {
-                                        if (error.name !== 'AbortError') {
-                                            console.warn('[Player] Transition play interrupted:', error);
-                                        }
+                    if (isElementCaptured && isExternalSource && !audioUrl.startsWith('blob:')) {
+                        console.log('[Player] Resetting audio element to prevent context redirection silence');
+                        currentAudio.pause();
+                        currentAudio.src = '';
+
+                        // Create NEW element
+                        const newAudio = new Audio();
+                        newAudio.volume = state.volume;
+                        newAudio.preload = 'auto';
+                        setAudio(newAudio); // This triggers re-render and listener attachment
+                        currentAudio = newAudio;
+                    } else {
+                        currentAudio.pause();
+                    }
+
+                    // Don't await previous play promise, just catch any resulting 'interrupted' errors
+                    if (playPromiseRef.current) {
+                        playPromiseRef.current.catch(() => { });
+                    }
+
+                    if (playbackRequestId.current !== currentRequestId) return;
+
+                    currentAudio.currentTime = 0;
+
+                    // Configure CrossOrigin
+                    // We start with NO crossOrigin for Jamendo to ensure playback works, then upgrade later.
+                    if (isExternalSource && !isAudioProxied(originalExternalUrl!)) {
+                        currentAudio.removeAttribute('crossorigin');
+                    } else {
+                        currentAudio.crossOrigin = 'anonymous';
+                    }
+
+                    currentAudio.src = audioUrl;
+                    currentAudio.load();
+
+                    // 3. Play
+                    const playPromise = currentAudio.play();
+                    playPromiseRef.current = playPromise;
+
+                    await playPromise;
+
+                    if (playbackRequestId.current === currentRequestId) {
+                        dispatch({ type: 'PLAY' });
+
+                        // History recording
+                        const isEpisode = 'episode_id' in state.currentTrack!;
+                        const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
+                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource);
+                    }
+
+                    // 4. Background Proxy Upgrade (for Visualization)
+                    if (isExternalSource && !isAudioProxied(originalExternalUrl!) && playbackRequestId.current === currentRequestId) {
+                        try {
+                            // Fetch blob in background
+                            const blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
+
+                            // Check if still playing the same track
+                            if (playbackRequestId.current === currentRequestId && currentAudio.src !== blobUrl) {
+                                console.log('[Player] Upgrading to proxied blob for visualization');
+                                const currentTime = currentAudio.currentTime;
+                                const wasPlaying = !currentAudio.paused;
+
+                                currentAudio.crossOrigin = 'anonymous';
+                                currentAudio.src = blobUrl;
+                                currentAudio.currentTime = currentTime;
+
+                                if (wasPlaying) {
+                                    const resumePromise = currentAudio.play();
+                                    playPromiseRef.current = resumePromise;
+                                    await resumePromise.catch((e: Error) => {
+                                        if (e.name !== 'AbortError') console.warn('Resume failed:', e);
                                     });
                                 }
                             }
+                        } catch (err) {
+                            console.warn('[Player] Proxy upgrade failed, continuing with original:', err);
                         }
-                    }).catch((err) => {
-                        console.warn('[Player] Failed to fetch proxied audio:', err);
-                        // Continue with original URL - audio plays, just no visualization
-                    });
-                }
-            } else {
-                // Appwrite sources always support CORS
-                audioRef.current.crossOrigin = 'anonymous';
-            }
+                    }
 
-            audioRef.current.src = audioUrl;
-            audioRef.current.load();
-            audioRef.current.play()
-                .then(() => {
-                    dispatch({ type: 'PLAY' });
-                    // Record this play in history
-                    const isEpisode = 'episode_id' in state.currentTrack!;
-                    const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
-                    historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource);
-                })
-                .catch((err) => {
-                    console.error('Failed to play audio:', err);
-                });
+                } catch (err: any) {
+                    if (playbackRequestId.current === currentRequestId) {
+                        if (err.name === 'AbortError') {
+                            // Expected during rapid skipping
+                            console.debug('[Player] Playback aborted by new request');
+                        } else {
+                            console.error('[Player] Playback failed:', err);
+
+                            // Fallback: Try proxy if original source failed (e.g. 404)
+                            if (isExternalSource && !audioUrl.startsWith('blob:')) {
+                                console.log('[Player] Original source failed, attempting proxy fallback...');
+                                try {
+                                    const blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
+
+                                    // Verify we are still on the same track request
+                                    if (playbackRequestId.current === currentRequestId) {
+                                        audio.crossOrigin = 'anonymous';
+                                        audio.src = blobUrl;
+                                        audio.load();
+                                        await audio.play();
+                                        dispatch({ type: 'PLAY' });
+                                        return; // Recovered successfully
+                                    }
+                                } catch (proxyErr) {
+                                    console.warn('[Player] Proxy fallback also failed:', proxyErr);
+                                }
+                            }
+
+                            // Auto-skip if playback failed completely
+                            console.warn('[Player] Track unavailable, skipping to next...');
+                            setTimeout(() => {
+                                dispatch({ type: 'NEXT' });
+                            }, 1500);
+                        }
+                    }
+                }
+            };
+
+            startPlayback();
         }
     }, [state.currentTrack?.$id]);
 
     // Volume change handler
     useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.volume = state.volume;
-        }
-    }, [state.volume]);
+        audio.volume = state.volume;
+    }, [state.volume, audio]);
 
     function play(item: PlayableItem) {
         dispatch({ type: 'SET_TRACK', payload: item });
@@ -309,23 +422,60 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     function pause() {
         // Save position before pausing
-        if (state.currentTrack && audioRef.current) {
+        if (state.currentTrack) {
             const isEpisode = 'episode_id' in state.currentTrack;
-            historyService.updatePosition(state.currentTrack.$id, audioRef.current.currentTime, isEpisode);
+            historyService.updatePosition(state.currentTrack.$id, audio.currentTime, isEpisode);
         }
-        audioRef.current?.pause();
+        audio.pause();
         dispatch({ type: 'PAUSE' });
     }
 
     function resume() {
-        audioRef.current?.play();
+        audio.play();
         dispatch({ type: 'PLAY' });
     }
 
     function seek(time: number) {
-        if (audioRef.current) {
-            audioRef.current.currentTime = time;
-            dispatch({ type: 'SET_PROGRESS', payload: time });
+        if (!audio) return;
+
+        const duration = audio.duration;
+        if (!Number.isFinite(duration) || duration === 0) {
+            console.warn('[Player] Cannot seek: Duration is invalid or not yet loaded:', duration);
+            return;
+        }
+
+        if (!Number.isFinite(time)) {
+            console.warn('[Player] Cannot seek: Invalid time provided:', time);
+            return;
+        }
+
+        const safeTime = Math.max(0, Math.min(time, duration));
+
+        try {
+            console.log(`[Player] Seeking to ${safeTime}s / ${duration}s (ReadyState: ${audio.readyState}, Source: ${audio.src.substring(0, 50)}...)`);
+
+            // Set seeking flag to prevent timeupdate from overriding
+            isSeekingRef.current = true;
+
+            // If audio is not ready, defer the seek
+            if (audio.readyState < 1) {
+                console.log('[Player] Audio not ready for seeking, deferring...');
+                (audio as any)._targetSeek = safeTime;
+            } else {
+                audio.currentTime = safeTime;
+            }
+
+            // Apply to state immediately for UI responsiveness
+            dispatch({ type: 'SET_PROGRESS', payload: safeTime });
+
+            // Reset seeking flag after a short delay to allow browser to update
+            setTimeout(() => {
+                isSeekingRef.current = false;
+            }, 150); // Increased delay for stability
+
+        } catch (err) {
+            isSeekingRef.current = false;
+            console.error('[Player] Seek failed:', err);
         }
     }
 
@@ -391,6 +541,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 toggleMoodLight,
                 toggleFullscreen,
                 toggleAudioCanvas,
+                audio,
                 audioRef,
                 showMoodLight: state.showMoodLight,
                 showFullscreen: state.showFullscreen,

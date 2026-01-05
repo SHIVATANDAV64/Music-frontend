@@ -1,13 +1,20 @@
 /**
- * Fullscreen Player Component
- * Immersive player with lyrics, visualizer, and dynamic color background.
- * Based on soulmate-mono's FullscreenPlayer.tsx
+ * Fullscreen Player - Cinematic Glass Experience
+ * 
+ * Redesigned to prioritize the Visualizer (Sound made visible).
+ * Controls are floating in a glass dock at the bottom.
+ * Text is elegant and unobtrusive.
  */
-
-import { useState, useEffect, useRef } from 'react';
-import { X, Music } from 'lucide-react';
-import { extractDominantColor, createGradientFromColor } from '../../utils/colorExtractor';
+import { useState, useEffect } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Minimize2, Heart, ListMusic, Volume2, Volume1, VolumeX } from 'lucide-react';
+import { extractDominantColor } from '../../utils/colorExtractor';
 import { getLyrics, type LyricsResult } from '../../services/lyrics.service';
+import { CymaticsVisualizer, VisualizerToggle } from '../ui/CymaticsVisualizer';
+import { usePlayer } from '../../context/PlayerContext';
+import { BreathingWaveform } from './BreathingWaveform';
+import { favoritesService } from '../../services/favorites.service';
+import { useAuth } from '../../context/AuthContext';
+import { QueuePanel } from './QueuePanel';
 
 interface FullscreenPlayerProps {
     trackName: string | null;
@@ -25,27 +32,66 @@ export function FullscreenPlayer({
     artistName,
     albumArt,
     currentTime,
+    duration,
     isPlaying,
     isVisible,
     onClose,
 }: FullscreenPlayerProps) {
+    const {
+        currentTrack,
+        pause, resume, next, previous,
+        shuffle, toggleShuffle, repeat, toggleRepeat,
+        volume, setVolume
+    } = usePlayer();
+    const { user } = useAuth();
+
     const [lyrics, setLyrics] = useState<LyricsResult | null>(null);
     const [activeLineIndex, setActiveLineIndex] = useState(-1);
-    const [backgroundGradient, setBackgroundGradient] = useState('linear-gradient(180deg, rgba(20, 20, 20, 1) 0%, rgba(10, 10, 10, 1) 100%)');
-    const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+    const [themeColor, setThemeColor] = useState('#d4af37'); // Default gold
+    const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('sacred');
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isAddingFavorite, setIsAddingFavorite] = useState(false);
+    const [showQueue, setShowQueue] = useState(false);
 
-    const lyricsContainerRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number | null>(null);
+    // Format time helper: 0:00
+    const formatTime = (t: number) => {
+        if (!Number.isFinite(t)) return '0:00';
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
-    // Extract dominant color from album art
+    // Extract colors
     useEffect(() => {
         if (!albumArt || !isVisible) return;
-
-        extractDominantColor(albumArt).then((color) => {
-            setBackgroundGradient(createGradientFromColor(color));
+        extractDominantColor(albumArt).then((colorResult) => {
+            // Convert RGB to hex string for components expecting hex colors
+            const { r, g, b } = colorResult.rgb;
+            const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            setThemeColor(hex);
         });
     }, [albumArt, isVisible]);
+
+    // Check favorite status
+    useEffect(() => {
+        if (!user || !currentTrack || !isVisible) return;
+        favoritesService.isFavorite(user.$id, currentTrack.$id)
+            .then(setIsFavorite)
+            .catch(() => setIsFavorite(false));
+    }, [currentTrack?.$id, user?.$id, isVisible]);
+
+    async function handleFavoriteClick() {
+        if (!user || !currentTrack || isAddingFavorite) return;
+        setIsAddingFavorite(true);
+        try {
+            const newState = await favoritesService.toggleFavorite(user.$id, currentTrack as any);
+            setIsFavorite(newState);
+        } catch (err) {
+            console.error('Failed to toggle favorite:', err);
+        } finally {
+            setIsAddingFavorite(false);
+        }
+    }
 
     // Fetch lyrics
     useEffect(() => {
@@ -53,306 +99,206 @@ export function FullscreenPlayer({
             setLyrics(null);
             return;
         }
-
-        const fetchLyrics = async () => {
-            setIsLoadingLyrics(true);
-            try {
-                const result = await getLyrics(trackName, artistName);
-                setLyrics(result);
-            } catch (err) {
-                console.error('Failed to fetch lyrics:', err);
-            } finally {
-                setIsLoadingLyrics(false);
-            }
-        };
-
-        fetchLyrics();
+        getLyrics(trackName, artistName)
+            .then(setLyrics)
+            .catch(err => console.error('Lyrics fetch failed:', err));
     }, [trackName, artistName, isVisible]);
 
-    // Update active lyric line
+    // Sync Lyrics
     useEffect(() => {
         if (!lyrics?.syncedLyrics) return;
-
         const lines = lyrics.syncedLyrics;
-        let newActiveIndex = -1;
-
+        let idx = -1;
         for (let i = lines.length - 1; i >= 0; i--) {
             if (currentTime >= lines[i].time) {
-                newActiveIndex = i;
+                idx = i;
                 break;
             }
         }
-
-        if (newActiveIndex !== activeLineIndex) {
-            setActiveLineIndex(newActiveIndex);
-        }
-    }, [currentTime, lyrics, activeLineIndex]);
-
-    // Auto-scroll lyrics
-    useEffect(() => {
-        if (lyricsContainerRef.current && activeLineIndex !== -1) {
-            const container = lyricsContainerRef.current;
-            const activeElement = container.children[activeLineIndex] as HTMLElement;
-            if (activeElement) {
-                activeElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
-            }
-        }
-    }, [activeLineIndex]);
-
-    // Wave visualizer animation
-    useEffect(() => {
-        if (!isVisible || !canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const barCount = 32;
-        const barHeights = new Array(barCount).fill(0);
-        const targetHeights = new Array(barCount).fill(0);
-        let phase = 0;
-        let lastTime = performance.now();
-
-        const draw = (currentAnimTime: number) => {
-            if (!isVisible) return;
-
-            const deltaTime = (currentAnimTime - lastTime) / 16.67;
-            lastTime = currentAnimTime;
-
-            animationRef.current = requestAnimationFrame(draw);
-
-            const width = canvas.width;
-            const height = canvas.height;
-            ctx.clearRect(0, 0, width, height);
-
-            const barWidth = width / barCount;
-            const gap = 3;
-
-            phase += (isPlaying ? 0.12 : 0.03) * deltaTime;
-
-            for (let i = 0; i < barCount; i++) {
-                const freq1 = Math.sin(phase + i * 0.25);
-                const freq2 = Math.sin(phase * 1.7 + i * 0.18);
-                const freq3 = Math.sin(phase * 0.6 + i * 0.4);
-
-                const centerWeight = 1 - Math.abs((i - barCount / 2) / (barCount / 2)) * 0.3;
-                const waveValue = (freq1 * 0.35 + freq2 * 0.25 + freq3 * 0.25) * 0.5 + 0.5;
-
-                if (isPlaying) {
-                    targetHeights[i] = waveValue * height * 0.85 * centerWeight;
-                } else {
-                    targetHeights[i] = 4 + Math.sin(phase * 0.5 + i * 0.2) * 2;
-                }
-
-                const smoothing = isPlaying ? 0.18 : 0.08;
-                barHeights[i] += (targetHeights[i] - barHeights[i]) * smoothing * deltaTime;
-
-                const barHeight = Math.max(4, barHeights[i]);
-                const x = i * barWidth + gap / 2;
-                const y = height - barHeight;
-
-                const brightness = isPlaying ? 0.5 + (barHeight / height) * 0.5 : 0.25;
-
-                ctx.fillStyle = `rgba(201, 169, 98, ${brightness})`; // Gold color
-                ctx.beginPath();
-                ctx.roundRect(x, y, barWidth - gap, barHeight, [3, 3, 0, 0]);
-                ctx.fill();
-            }
-        };
-
-        animationRef.current = requestAnimationFrame(draw);
-
-        return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        };
-    }, [isVisible, isPlaying]);
-
-    // Handle escape key
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isVisible) {
-                onClose();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isVisible, onClose]);
+        setActiveLineIndex(idx);
+    }, [currentTime, lyrics]);
 
     if (!isVisible) return null;
 
     return (
-        <div
-            style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 9999,
-                background: backgroundGradient,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '48px',
-                overflow: 'hidden',
-            }}
-        >
-            {/* Close Button */}
-            <button
-                onClick={onClose}
-                style={{
-                    position: 'absolute',
-                    top: 24,
-                    right: 24,
-                    padding: 12,
-                    borderRadius: '50%',
-                    border: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(12px)',
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                }}
-            >
-                <X size={24} />
-            </button>
+        <div className="fixed inset-0 z-[200] flex flex-col animate-in fade-in duration-500 bg-black overflow-hidden font-sans">
 
-            {/* Content */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 32,
-                width: '100%',
-                maxWidth: 600,
-                height: '100%',
-            }}>
-                {/* Album Art */}
-                <div style={{
-                    width: 280,
-                    height: 280,
-                    borderRadius: 16,
-                    overflow: 'hidden',
-                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-                    flexShrink: 0,
-                }}>
-                    {albumArt ? (
-                        <img
-                            src={albumArt}
-                            alt={trackName || 'Album art'}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                            }}
-                        />
-                    ) : (
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(255, 255, 255, 0.05)',
-                        }}>
-                            <Music size={64} color="rgba(255, 255, 255, 0.2)" />
-                        </div>
-                    )}
+            {/* 1. LAYER: VISUALIZER (The Hero) */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 transition-opacity duration-1000">
+                    <CymaticsVisualizer mode={visualizerMode} />
+                </div>
+                {/* Subtle vignette, not a heavy gradient */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
+            </div>
+
+            {/* 2. LAYER: TOP BAR (Header) */}
+            <div className="relative z-50 w-full p-6 md:p-8 flex justify-between items-start">
+                {/* Visualizer Toggle */}
+                <div className="backdrop-blur-md bg-black/20 rounded-full p-1 border border-white/10">
+                    <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
                 </div>
 
-                {/* Track Info */}
-                <div style={{ textAlign: 'center' }}>
-                    <h2 style={{
-                        fontSize: 28,
-                        fontWeight: 700,
-                        color: 'white',
-                        margin: 0,
-                        marginBottom: 8,
-                    }}>
-                        {trackName || 'No track selected'}
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="group flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors"
+                >
+                    <div className="w-12 h-12 rounded-full backdrop-blur-md bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-all">
+                        <Minimize2 size={20} />
+                    </div>
+                </button>
+            </div>
+
+            {/* 3. LAYER: CENTER STAGE (Lyrics / Metadata) */}
+            <div className="relative z-40 flex-1 flex flex-col items-center justify-center text-center px-4 -mt-20">
+
+                {/* Metadata */}
+                <div className="mb-12 space-y-2">
+                    <h2 className="text-2xl md:text-3xl font-semibold text-white/90 tracking-tight drop-shadow-lg">
+                        {trackName || 'Unknown Track'}
                     </h2>
-                    <p style={{
-                        fontSize: 18,
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        margin: 0,
-                    }}>
-                        {artistName || 'Unknown artist'}
+                    <p className="text-lg text-[#d4af37]/80 font-medium tracking-wide drop-shadow-md">
+                        {artistName || 'Unknown Artist'}
                     </p>
                 </div>
 
-                {/* Visualizer */}
-                <canvas
-                    ref={canvasRef}
-                    width={400}
-                    height={60}
-                    style={{
-                        width: '100%',
-                        maxWidth: 400,
-                        height: 60,
-                        flexShrink: 0,
-                    }}
-                />
-
-                {/* Lyrics */}
-                <div
-                    ref={lyricsContainerRef}
-                    style={{
-                        flex: 1,
-                        overflow: 'auto',
-                        width: '100%',
-                        textAlign: 'center',
-                        paddingBottom: 100,
-                    }}
-                >
-                    {isLoadingLyrics && (
-                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', padding: 24 }}>
-                            Loading lyrics...
-                        </div>
-                    )}
-
-                    {lyrics?.syncedLyrics?.map((line, index) => (
-                        <div
-                            key={index}
-                            style={{
-                                fontSize: index === activeLineIndex ? 24 : 18,
-                                fontWeight: index === activeLineIndex ? 700 : 400,
-                                color: index === activeLineIndex
-                                    ? 'white'
-                                    : index < activeLineIndex
-                                        ? 'rgba(255, 255, 255, 0.3)'
-                                        : 'rgba(255, 255, 255, 0.6)',
-                                padding: '8px 0',
-                                transition: 'all 0.3s ease',
-                                transform: index === activeLineIndex ? 'scale(1.05)' : 'scale(1)',
-                            }}
-                        >
-                            {line.text}
-                        </div>
-                    ))}
-
-                    {lyrics && !lyrics.syncedLyrics && lyrics.plainLyrics && (
-                        <div style={{
-                            whiteSpace: 'pre-wrap',
-                            fontSize: 16,
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            lineHeight: 2,
-                        }}>
-                            {lyrics.plainLyrics}
-                        </div>
-                    )}
-
-                    {!lyrics && !isLoadingLyrics && (
-                        <div style={{ color: 'rgba(255, 255, 255, 0.4)', padding: 24 }}>
-                            No lyrics available
-                        </div>
+                {/* Lyrics Highlight */}
+                <div className="h-24 flex items-center justify-center">
+                    {lyrics?.syncedLyrics && activeLineIndex !== -1 ? (
+                        <p className="text-2xl md:text-3xl text-white/90 font-medium animate-in slide-in-from-bottom-2 fade-in duration-300 drop-shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
+                            {lyrics.syncedLyrics[activeLineIndex].text}
+                        </p>
+                    ) : (
+                        <p className="text-white/40 italic flex items-center gap-2">
+                            <span className="w-1 h-1 rounded-full bg-current" />
+                            Sound made visible
+                            <span className="w-1 h-1 rounded-full bg-current" />
+                        </p>
                     )}
                 </div>
             </div>
+
+            {/* 4. LAYER: BOTTOM DOCK (Controls) */}
+            <div className="relative z-50 w-full pb-12 px-6 md:px-12 flex flex-col items-center">
+
+                {/* Glass Dock Container */}
+                <div className="w-full max-w-3xl backdrop-blur-xl bg-black/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl ring-1 ring-white/5">
+
+                    {/* Scrubber Row */}
+                    <div className="flex items-center gap-4 mb-6">
+                        <span className="text-xs font-mono text-white/50 w-10 text-right">
+                            {formatTime(currentTime)}
+                        </span>
+
+                        {/* Interactive Waveform Scrubber */}
+                        <div className="flex-1 h-12 relative group">
+                            <BreathingWaveform
+                                height={48}
+                                color={themeColor}
+                                showProgress={true}
+                                className="opacity-80 group-hover:opacity-100 transition-opacity"
+                            />
+                        </div>
+
+                        <span className="text-xs font-mono text-white/50 w-10">
+                            {formatTime(duration)}
+                        </span>
+                    </div>
+
+                    {/* Controls Row */}
+                    <div className="flex items-center justify-between px-2 md:px-6">
+
+                        <div className="flex items-center gap-2 md:gap-4">
+                            {/* Shuffle */}
+                            <button
+                                onClick={toggleShuffle}
+                                className={`p-2 rounded-full transition-colors ${shuffle ? 'text-[#d4af37] bg-[#d4af37]/10' : 'text-white/40 hover:text-white'}`}
+                                title="Shuffle"
+                            >
+                                <Shuffle size={20} />
+                            </button>
+
+                            {/* Favorite */}
+                            <button
+                                onClick={handleFavoriteClick}
+                                className={`p-2 rounded-full transition-colors ${isFavorite ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-white'}`}
+                                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                                <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
+                            </button>
+                        </div>
+
+                        {/* Transport */}
+                        <div className="flex items-center gap-6 md:gap-8">
+                            <button onClick={previous} className="text-white/70 hover:text-white transition-all hover:scale-110">
+                                <SkipBack size={32} fill="currentColor" className="opacity-50" />
+                            </button>
+
+                            <button
+                                onClick={isPlaying ? pause : resume}
+                                className="w-16 h-16 rounded-full bg-[#d4af37] text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+                            >
+                                {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
+                            </button>
+
+                            <button onClick={next} className="text-white/70 hover:text-white transition-all hover:scale-110">
+                                <SkipForward size={32} fill="currentColor" className="opacity-50" />
+                            </button>
+                        </div>
+
+                        {/* Repeat & Queue */}
+                        <div className="flex items-center gap-2 md:gap-4">
+                            {/* Queue */}
+                            <button
+                                onClick={() => setShowQueue(!showQueue)}
+                                className={`p-2 rounded-full transition-colors ${showQueue ? 'text-[#d4af37] bg-[#d4af37]/10' : 'text-white/40 hover:text-white'}`}
+                                title="Queue"
+                            >
+                                <ListMusic size={20} />
+                            </button>
+
+                            {/* Repeat */}
+                            <button
+                                onClick={toggleRepeat}
+                                className={`p-2 rounded-full transition-colors ${repeat !== 'none' ? 'text-[#d4af37] bg-[#d4af37]/10' : 'text-white/40 hover:text-white'}`}
+                                title="Repeat"
+                            >
+                                {repeat === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+                            </button>
+
+                            {/* Volume Control */}
+                            <div className="flex items-center gap-2 group/vol">
+                                <button
+                                    onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
+                                    className="text-white/40 hover:text-white transition-colors"
+                                >
+                                    {volume === 0 ? <VolumeX size={20} /> : volume < 0.5 ? <Volume1 size={20} /> : <Volume2 size={20} />}
+                                </button>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value={volume}
+                                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                    className="w-0 group-hover/vol:w-24 transition-all duration-300 opacity-0 group-hover/vol:opacity-100 accent-[#d4af37] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Lyrics Layer (Overlay) */}
+            <div className="hidden">
+                {/* Future: Full Lyrics Scroll */}
+            </div>
+
+            {/* Queue Panel */}
+            <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
+
         </div>
     );
 }
-
-export default FullscreenPlayer;

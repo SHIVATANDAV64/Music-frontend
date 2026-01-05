@@ -40,12 +40,13 @@ export function BreathingWaveform({
 
     // Handle click to seek
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
         const container = containerRef.current;
-        if (!container || !duration) return;
+        if (!container || !duration || !Number.isFinite(duration)) return;
 
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const percent = x / rect.width;
+        const percent = Math.max(0, Math.min(1, x / rect.width));
         const newTime = percent * duration;
 
         seek(newTime);

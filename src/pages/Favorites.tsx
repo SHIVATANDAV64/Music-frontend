@@ -28,8 +28,13 @@ export function Favorites() {
         async function loadFavorites() {
             if (!user?.$id) return;
             try {
-                const data = await favoritesService.getUserFavorites(user.$id);
-                setFavorites(data);
+                const userFavorites = await favoritesService.getUserFavorites(user.$id);
+                if (Array.isArray(userFavorites)) {
+                    setFavorites(userFavorites);
+                } else {
+                    console.error("Favorites is not an array:", userFavorites);
+                    setFavorites([]);
+                }
             } catch (error) {
                 console.error('Failed to load favorites:', error);
             } finally {

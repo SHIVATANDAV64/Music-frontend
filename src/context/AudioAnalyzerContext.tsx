@@ -39,7 +39,7 @@ const DEFAULT_FFT_SIZE = 2048;
 const SMOOTHING_TIME_CONSTANT = 0.8;
 
 export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
-    const { audioRef, isPlaying } = usePlayer();
+    const { audio, isPlaying } = usePlayer();
 
     const [frequencyData, setFrequencyData] = useState<FrequencyData | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
@@ -56,8 +56,11 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
     const connectionAttemptedRef = useRef(false);
 
     const initialize = () => {
-        const audioElement = audioRef.current;
-        if (!audioElement || connectionAttemptedRef.current) return;
+        const audioElement = audio;
+        if (!audioElement) return;
+
+        // If already connected successfully, don't try again
+        if (connectionAttemptedRef.current && isInitialized) return;
 
         // Check if audio element has a valid source
         if (!audioElement.src) {
@@ -70,66 +73,102 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
         // without proper CORS headers will cause the browser to silence the audio 
         // (outputs zeroes) for security.
         // We MUST skip initialization if the URL is external and not yet proxied.
-        const isProxied = audioElement.src.startsWith('blob:');
+        // Detect if proxied or internal (anything NOT direct Jamendo)
         const isExternal = audioElement.src.includes('jamendo.com');
+        const isAppwrite = audioElement.src.includes('appwrite.io');
+        const isBlob = audioElement.src.startsWith('blob:');
 
-        if (isExternal && !isProxied) {
-            console.log('[AudioAnalyzerContext] Skipping initialization for cross-origin URL to prevent silence. Waiting for proxy...');
+        if (isExternal && !isAppwrite && !isBlob) {
+            console.log('[AudioAnalyzerContext] Skipping initialization for direct Jamendo URL to prevent silence.');
             return;
         }
 
         try {
-            // Create audio context (Safari needs webkitAudioContext)
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            const audioContext = new AudioContextClass();
-            audioContextRef.current = audioContext;
+            // Create audio context if it doesn't exist
+            if (!audioContextRef.current) {
+                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                audioContextRef.current = new AudioContextClass();
+            }
+            const audioContext = audioContextRef.current;
 
-            // Create analyzer node
-            const analyzer = audioContext.createAnalyser();
-            analyzer.fftSize = DEFAULT_FFT_SIZE;
-            analyzer.smoothingTimeConstant = SMOOTHING_TIME_CONSTANT;
-            analyzerRef.current = analyzer;
+            // Create analyzer node if it doesn't exist
+            if (!analyzerRef.current) {
+                const analyzer = audioContext.createAnalyser();
+                analyzer.fftSize = DEFAULT_FFT_SIZE;
+                analyzer.smoothingTimeConstant = SMOOTHING_TIME_CONSTANT;
+                analyzerRef.current = analyzer;
+            }
+            const analyzer = analyzerRef.current;
 
             // Create source from audio element - THIS CAN ONLY BE DONE ONCE
-            // If we do this on a Jamendo URL, it will be silenced. 
-            // By waiting for the blob: URL, we ensure it's safe.
-            const source = audioContext.createMediaElementSource(audioElement);
-            sourceRef.current = source;
-            connectionAttemptedRef.current = true;
+            if (!sourceRef.current) {
+                try {
+                    const source = audioContext.createMediaElementSource(audioElement);
+                    sourceRef.current = source;
 
-            // Connect: source → analyzer → destination (speakers)
-            source.connect(analyzer);
-            analyzer.connect(audioContext.destination);
+                    // Mark element as captured - PlayerContext will use this to know if it needs to reset
+                    (audioElement as any)._isCaptured = true;
+
+                    // Connect: source → analyzer → destination (speakers)
+                    source.connect(analyzer);
+                    analyzer.connect(audioContext.destination);
+                    console.log('[AudioAnalyzerContext] Source connected successfully');
+                } catch (sourceError: any) {
+                    if (sourceError.name === 'InvalidStateError') {
+                        console.warn('[AudioAnalyzerContext] Component re-mounted but audio is already connected. Attempting to recover state.');
+                        // We can't recreate the source, but we can't get the old one either if it wasn't global.
+                        // However, since AudioAnalyzerProvider is a singleton at the root, sourceRef.current 
+                        // should have persisted IF the provider didn't unmount.
+                    } else {
+                        throw sourceError;
+                    }
+                }
+            }
+
+            connectionAttemptedRef.current = true;
 
             // Initialize data buffers
             const bufferLength = analyzer.frequencyBinCount;
-            frequenciesBufferRef.current = new Uint8Array(bufferLength);
-            waveformBufferRef.current = new Uint8Array(bufferLength);
+            if (!frequenciesBufferRef.current) frequenciesBufferRef.current = new Uint8Array(bufferLength);
+            if (!waveformBufferRef.current) waveformBufferRef.current = new Uint8Array(bufferLength);
 
             setIsInitialized(true);
 
-            console.log('[AudioAnalyzerContext] Initialized successfully with safe source', {
+            console.log('[AudioAnalyzerContext] Initialized successfully', {
                 fftSize: analyzer.fftSize,
                 src: audioElement.src.substring(0, 30) + '...',
             });
         } catch (error) {
             console.error('[AudioAnalyzerContext] Failed to initialize:', error);
-            // Don't set connectionAttemptedRef to true on error, so we can retry
-            connectionAttemptedRef.current = false;
+            // Don't set connectionAttemptedRef to true on error, so we can retry if it wasn't a connection error
+            if (!(error instanceof Error && error.name === 'InvalidStateError')) {
+                connectionAttemptedRef.current = false;
+            }
         }
     };
 
     // Try to initialize when audio element becomes available and has a source
     useEffect(() => {
-        const audioElement = audioRef.current;
-        if (audioElement && !connectionAttemptedRef.current && audioElement.src) {
+        const audioElement = audio;
+        if (!audioElement) return;
+
+        // Reset connection flag if the audio element instance changed
+        if ((audioElement as any)._lastInstance !== audioElement) {
+            console.log('[AudioAnalyzerContext] Detected fresh audio element, resetting connection state');
+            sourceRef.current = null; // Recreate source node for the new element
+            connectionAttemptedRef.current = false;
+            (audioElement as any)._lastInstance = audioElement;
+            setIsInitialized(false);
+        }
+
+        if (!connectionAttemptedRef.current && audioElement.src) {
             // Small delay to ensure audio element is fully ready
             const timeoutId = setTimeout(() => {
                 initialize();
             }, 100);
             return () => clearTimeout(timeoutId);
         }
-    }, [audioRef.current?.src]);
+    }, [audio, audio.src]);
 
     // Resume audio context on user interaction (required by browsers)
     useEffect(() => {

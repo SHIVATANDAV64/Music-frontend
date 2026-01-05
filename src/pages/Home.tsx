@@ -78,58 +78,25 @@ export function Home() {
                     </div>
                 </div>
 
-                {/* Content Overlay */}
-                <div className="relative z-10 text-center px-8 max-w-4xl mx-auto">
-                    {/* Featured Album Art - Large, Sacred */}
+                {/* Content Overlay - Hidden when playing to keep visualizer clean */}
+                <div className={`relative z-10 text-center px-8 max-w-4xl mx-auto transition-all duration-1000 ${isPlaying ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`}>
+                    {/* Featured Track Info - Minimal Overlay */}
                     {featured && (
-                        <div className="mb-12">
-                            <div
-                                className="relative mx-auto w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-2xl group cursor-pointer"
+                        <div className="mb-8 animate-in fade-in zoom-in duration-700">
+                            <h1 className="text-4xl md:text-6xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/80 mb-4 tracking-tight">
+                                {featured.title}
+                            </h1>
+                            <p className="text-xl text-[#d4af37] font-serif italic mb-8">
+                                {featured.artist}
+                            </p>
+
+                            <button
                                 onClick={() => play(featured)}
-                                style={{
-                                    boxShadow: isPlaying && currentTrack?.$id === featured.$id
-                                        ? '0 0 80px rgba(201, 169, 98, 0.4), 0 25px 50px rgba(0,0,0,0.5)'
-                                        : '0 25px 50px rgba(0,0,0,0.5)',
-                                    transition: 'box-shadow 1s ease'
-                                }}
+                                className="inline-flex items-center gap-3 px-8 py-4 bg-[#c9a962] text-[#050505] rounded-full font-semibold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(201,169,98,0.3)] hover:shadow-[0_0_50px_rgba(201,169,98,0.5)]"
                             >
-                                {featuredCoverUrl ? (
-                                    <img
-                                        src={featuredCoverUrl}
-                                        alt={featured.title}
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] flex items-center justify-center">
-                                        <Headphones size={64} className="text-[#c9a962]/50" />
-                                    </div>
-                                )}
-
-                                {/* Play overlay on hover */}
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                    <div className="w-16 h-16 rounded-full bg-[#c9a962] flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform">
-                                        <Play size={28} fill="#0a0a0a" className="ml-1 text-[#0a0a0a]" />
-                                    </div>
-                                </div>
-
-                                {/* Now playing indicator */}
-                                {isPlaying && currentTrack?.$id === featured.$id && (
-                                    <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#c9a962] text-[#0a0a0a]">
-                                        <span className="w-2 h-2 rounded-full bg-[#0a0a0a] animate-pulse" />
-                                        <span className="text-xs font-semibold uppercase tracking-wider">Now Playing</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Track info below art */}
-                            <div className="mt-8">
-                                <h2 className="text-2xl md:text-3xl font-serif text-[#fafaf5] mb-2">
-                                    {featured.title}
-                                </h2>
-                                <p className="text-lg text-[#fafaf5]/60">
-                                    {featured.artist}
-                                </p>
-                            </div>
+                                <Play size={24} fill="currentColor" />
+                                Play Now
+                            </button>
                         </div>
                     )}
 

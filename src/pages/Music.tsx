@@ -51,7 +51,11 @@ export function MusicPage() {
                 setTracks(data);
                 setPage(2);
             } else {
-                setTracks(prev => [...prev, ...data]);
+                setTracks(prev => {
+                    const existingIds = new Set(prev.map(t => t.$id));
+                    const newTracks = data.filter(t => !existingIds.has(t.$id));
+                    return [...prev, ...newTracks];
+                });
                 setPage(prev => prev + 1);
             }
 

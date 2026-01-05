@@ -1,20 +1,20 @@
 /**
- * AudioPlayer - Minimal controls, maximum visualizer
+ * AudioPlayer - Organic Floating Dock
  * 
- * Philosophy: The player should be minimal and functional.
- * The cymatics visualizer is the hero - the player supports it.
- * Like a frame for art - present but not distracting.
+ * Philosophy: A tactile, physical object that rests on the screen.
+ * Not a digital bar, but a control surface.
  */
 import { useState } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Shuffle, Repeat, Repeat1, Volume2, VolumeX,
-    Lightbulb, Maximize2
+    Maximize2, ListMusic
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { getTrackCoverUrl } from '../../utils/trackUtils';
 import { CymaticsVisualizer, VisualizerToggle } from '../ui/CymaticsVisualizer';
 import { BreathingWaveform } from './BreathingWaveform';
+import { QueuePanel } from './QueuePanel';
 import type { Track, Episode } from '../../types';
 
 function formatTime(seconds: number): string {
@@ -44,189 +44,170 @@ export function AudioPlayer() {
         previous,
         toggleShuffle,
         toggleRepeat,
-        toggleMoodLight,
         toggleFullscreen,
-        showMoodLight,
     } = usePlayer();
 
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('chladni');
+    const [isHovering, setIsHovering] = useState(false);
+    const [showQueue, setShowQueue] = useState(false);
 
     if (!currentTrack) return null;
 
-    const coverUrl = isTrack(currentTrack) ? getTrackCoverUrl(currentTrack, 120, 120) : null;
+    const coverUrl = isTrack(currentTrack) ? getTrackCoverUrl(currentTrack, 80, 80) : null;
+
+    // Calculate progress percentage for the organic fill effect
+    const progressPercent = duration ? (progress / duration) * 100 : 0;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[100]">
-            {/* Ambient glow under player */}
+        <>
+            {/* 
+              Floating Dynamic Dock 
+              Positioned at bottom center, floating above content.
+            */}
             <div
-                className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
-                style={{
-                    background: 'radial-gradient(ellipse at center bottom, rgba(201, 169, 98, 0.15) 0%, transparent 50%)',
-                    opacity: isPlaying ? 1 : 0,
-                    filter: 'blur(40px)',
-                }}
-            />
+                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[95vw] max-w-4xl transition-all duration-300 ease-out"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+            >
+                {/* Main Card Surface */}
+                <div className="relative bg-[#161616] rounded-[24px] shadow-paper border border-[#ffffff]/5 overflow-hidden backdrop-blur-md">
 
-            {/* Player Container */}
-            <div className="relative bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-white/5 shadow-2xl">
-                {/* Breathing Waveform - Top of player */}
-                <div className="w-full h-[50px] relative z-10">
-                    <BreathingWaveform height={50} color="#c9a962" showProgress={true} />
-                </div>
+                    {/* Background Texture Overlay */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
+                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }}
+                    />
 
-                <div className="w-full flex flex-col gap-4 px-4 py-4 md:px-6 md:py-5">
-                    {/* Top Row: Track Info + Actions */}
-                    <div className="flex items-center gap-4 w-full">
-                        {/* Album Art */}
-                        <div
-                            className="w-14 h-14 md:w-16 md:h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-lg transition-all duration-300"
-                            style={{
-                                boxShadow: isPlaying
-                                    ? '0 0 24px rgba(201, 169, 98, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3)'
-                                    : '0 4px 12px rgba(0, 0, 0, 0.3)',
-                                transform: isPlaying ? 'scale(1.02)' : 'scale(1)',
-                            }}
-                        >
-                            {coverUrl ? (
-                                <img src={coverUrl} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center">
-                                    <span className="text-xl">🎵</span>
+                    {/* Subtle Progress Fill (Bottom) */}
+                    <div
+                        className="absolute bottom-0 left-0 h-[2px] bg-[#d4af37] transition-all duration-300 ease-linear opacity-50"
+                        style={{ width: `${progressPercent}%` }}
+                    />
+
+                    {/* 
+                       Internal Grid Layout 
+                       Three sections: Info (Left), Controls (Center), Extra (Right)
+                    */}
+                    <div className="relative flex items-center justify-between px-4 py-3 md:px-6 md:py-4 gap-4">
+
+                        {/* LEFT: Track Info & Art */}
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+
+
+                            <div className="flex flex-col min-w-0">
+                                <h4 className="text-[#e6e6e6] text-sm font-medium truncate font-sans tracking-wide">
+                                    {currentTrack.title}
+                                </h4>
+                                <p className="text-[#999] text-xs truncate font-serif italic">
+                                    {isTrack(currentTrack) ? currentTrack.artist : 'Podcast'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* CENTER: Organic Controls */}
+                        <div className="flex flex-col items-center gap-2 flex-[2] max-w-[320px]">
+                            <div className="flex items-center gap-6">
+                                <button
+                                    onClick={previous}
+                                    className="text-[#999] hover:text-[#e6e6e6] transition-colors p-2"
+                                >
+                                    <SkipBack size={20} className="hover:scale-110 transition-transform" />
+                                </button>
+
+                                <button
+                                    onClick={() => (isPlaying ? pause() : resume())}
+                                    className="w-12 h-12 rounded-full bg-[#d4af37] text-[#0e0e0e] flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
+                                >
+                                    {isPlaying ? (
+                                        <Pause size={20} fill="currentColor" />
+                                    ) : (
+                                        <Play size={20} fill="currentColor" className="ml-0.5" />
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={next}
+                                    className="text-[#999] hover:text-[#e6e6e6] transition-colors p-2"
+                                >
+                                    <SkipForward size={20} className="hover:scale-110 transition-transform" />
+                                </button>
+                            </div>
+
+                            {/* Interactive Visualizer Scrubber */}
+                            <div className="w-full h-12 group flex items-center relative">
+                                {/* The Waveform IS the visualizer + scrubber */}
+                                <BreathingWaveform
+                                    height={40}
+                                    color="#d4af37"
+                                    showProgress={true}
+                                    className="w-full opacity-60 group-hover:opacity-100 transition-opacity"
+                                />
+
+                                {/* Time Tooltip */}
+                                <div className="absolute right-0 -bottom-4 text-[9px] text-[#555] opacity-0 group-hover:opacity-100 transition-opacity font-mono">
+                                    {formatTime(progress)} / {formatTime(duration)}
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Track Info */}
-                        <div className="flex-1 min-w-0">
-                            <h4
-                                className="font-semibold text-sm md:text-base truncate transition-colors mb-1"
-                                style={{ color: isPlaying ? '#c9a962' : '#fafaf5' }}
-                            >
-                                {currentTrack.title}
-                            </h4>
-                            <p className="text-xs md:text-sm text-[#fafaf5]/60 truncate mb-1">
-                                {isTrack(currentTrack) ? currentTrack.artist : 'Podcast'}
-                            </p>
-                            <p className="text-[10px] md:text-xs text-[#fafaf5]/40">
-                                {formatTime(progress)} / {formatTime(duration)}
-                            </p>
-                        </div>
-
-                        {/* Right side actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                                onClick={toggleMoodLight}
-                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                                    showMoodLight 
-                                        ? 'text-[#c9a962] bg-[#c9a962]/10' 
-                                        : 'text-[#fafaf5]/50 hover:text-[#fafaf5] hover:bg-white/5'
-                                }`}
-                                title="Mood Light"
-                            >
-                                <Lightbulb size={18} fill={showMoodLight ? 'currentColor' : 'none'} />
-                            </button>
+                        {/* RIGHT: Volume & Tools */}
+                        <div className="flex items-center gap-4 flex-1 justify-end min-w-0">
+                            {/* Visualizer Mode Mini-Toggle */}
+                            <div className="hidden md:block">
+                                <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
+                            </div>
 
                             <button
                                 onClick={toggleFullscreen}
-                                className="w-9 h-9 rounded-full flex items-center justify-center text-[#fafaf5]/50 hover:text-[#fafaf5] hover:bg-white/5 transition-all flex-shrink-0"
-                                title="Fullscreen Player"
+                                className="text-[#999] hover:text-[#d4af37] transition-colors p-2"
+                                title="Expand"
                             >
                                 <Maximize2 size={18} />
                             </button>
+
+                            {/* Queue Toggle */}
+                            <button
+                                onClick={() => setShowQueue(!showQueue)}
+                                className={`p-2 transition-colors ${showQueue ? 'text-[#d4af37]' : 'text-[#999] hover:text-[#d4af37]'}`}
+                                title="Queue"
+                            >
+                                <ListMusic size={18} />
+                            </button>
+
+                            {/* Volume */}
+                            <div className="group hidden md:flex items-center gap-2">
+                                <button
+                                    onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
+                                    className="text-[#999] hover:text-[#e6e6e6]"
+                                >
+                                    {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                </button>
+                                <div className="w-0 overflow-hidden group-hover:w-20 transition-all duration-300">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.01"
+                                        value={volume}
+                                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                        className="w-20 h-1 accent-[#d4af37] cursor-pointer"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Visualizer - Full width, prominent */}
-                    <div className="w-full h-24 md:h-28 bg-[#161616] rounded-xl overflow-hidden relative border border-white/5">
-                        <CymaticsVisualizer mode={visualizerMode} />
-                    </div>
-
-                    {/* Controls Row */}
-                    <div className="flex items-center justify-between gap-4 w-full">
-                        {/* Left Controls */}
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <button
-                                onClick={toggleShuffle}
-                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                                    shuffle 
-                                        ? 'text-[#c9a962] bg-[#c9a962]/10' 
-                                        : 'text-[#fafaf5]/50 hover:text-[#fafaf5] hover:bg-white/5'
-                                }`}
-                                title="Shuffle"
-                            >
-                                <Shuffle size={16} />
-                            </button>
-
-                            <button
-                                onClick={previous}
-                                className="w-9 h-9 rounded-full flex items-center justify-center text-[#fafaf5]/70 hover:text-[#fafaf5] hover:bg-white/5 transition-all"
-                                title="Previous"
-                            >
-                                <SkipBack size={18} />
-                            </button>
-
-                            <button
-                                onClick={() => (isPlaying ? pause() : resume())}
-                                className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center bg-[#c9a962] text-[#0a0a0a] shadow-lg transition-all hover:scale-105 active:scale-95"
-                                style={{ boxShadow: isPlaying ? '0 0 24px rgba(201, 169, 98, 0.5)' : '0 0 20px rgba(201, 169, 98, 0.3)' }}
-                                title={isPlaying ? 'Pause' : 'Play'}
-                            >
-                                {isPlaying ? (
-                                    <Pause size={20} fill="currentColor" />
-                                ) : (
-                                    <Play size={20} fill="currentColor" className="ml-0.5" />
-                                )}
-                            </button>
-
-                            <button
-                                onClick={next}
-                                className="w-9 h-9 rounded-full flex items-center justify-center text-[#fafaf5]/70 hover:text-[#fafaf5] hover:bg-white/5 transition-all"
-                                title="Next"
-                            >
-                                <SkipForward size={18} />
-                            </button>
-
-                            <button
-                                onClick={toggleRepeat}
-                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                                    repeat !== 'none' 
-                                        ? 'text-[#c9a962] bg-[#c9a962]/10' 
-                                        : 'text-[#fafaf5]/50 hover:text-[#fafaf5] hover:bg-white/5'
-                                }`}
-                                title={`Repeat: ${repeat}`}
-                            >
-                                {repeat === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
-                            </button>
-                        </div>
-
-                        {/* Center: Visualizer Mode Toggle */}
-                        <div className="hidden md:flex flex-shrink-0">
-                            <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
-                        </div>
-
-                        {/* Right: Volume */}
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <button
-                                onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
-                                className="text-[#fafaf5]/60 hover:text-[#fafaf5] transition-colors flex-shrink-0 w-9 h-9 flex items-center justify-center"
-                                title={volume === 0 ? 'Unmute' : 'Mute'}
-                            >
-                                {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                            </button>
-                            <input
-                                type="range"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={volume}
-                                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                className="w-20 md:w-24 accent-[#c9a962] h-1.5 cursor-pointer"
-                                title={`Volume: ${Math.round(volume * 100)}%`}
-                            />
-                        </div>
+                    {/* Integrated Breathing Visualizer (Subtle Background) */}
+                    <div className="absolute bottom-0 left-0 right-0 h-[40px] opacity-20 pointer-events-none z-0 mix-blend-plus-lighter">
+                        <BreathingWaveform height={40} color="#d4af37" showProgress={false} />
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* Spacer to prevent content from being hidden behind the dock. */}
+            <div className="h-32" />
+
+            {/* Queue Panel */}
+            <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
+        </>
     );
 }

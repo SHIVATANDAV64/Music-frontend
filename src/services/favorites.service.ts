@@ -67,17 +67,30 @@ export const favoritesService = {
      * @returns New favorite status (true = favorited, false = unfavorited)
      */
     async toggleFavorite(_userId: string, track: Track): Promise<boolean> {
-        const response = await manageFavorites<{ isFavorite: boolean }>({
-            action: 'toggle',
-            trackId: track.$id,
-            trackSource: track.source,
-        });
+        try {
+            const response = await manageFavorites<{ isFavorite: boolean }>({
+                action: 'toggle',
+                trackId: track.$id,
+                trackSource: track.source,
+            });
 
-        if (!response.success) {
-            throw new Error(response.error || 'Failed to toggle favorite');
+            if (!response.success) {
+                if (response.error?.includes('Unknown attribute: "track_source"')) {
+                    throw new Error('Database Schema Mismatch: The "favorites" collection is missing the "track_source" attribute. Please add it in Appwrite Console.');
+                }
+                throw new Error(response.error || 'Failed to toggle favorite');
+            }
+
+            const data = response.data as any;
+            return data?.isFavorite ?? data?.data?.isFavorite ?? false;
+        } catch (err: any) {
+            console.error('[FavoritesService] Toggle failed:', err);
+            // Re-throw with a more user-friendly message if it's the schema error
+            if (err.message.includes('track_source')) {
+                throw err;
+            }
+            throw new Error('Failed to toggle favorite. Please check your internet connection or Appwrite Console.');
         }
-
-        return response.data?.isFavorite ?? false;
     },
 
     /**
@@ -97,12 +110,24 @@ export const favoritesService = {
         }
 
         // Map favorites to tracks
-        // For Jamendo tracks, the function returns track_id to be fetched client-side
-        // For Appwrite tracks, the function fetches the full track data
-        const favorites = response.data || [];
+        // Handle double-wrapping from function response
+        const rawData = response.data as any;
+        let favoritesData: FavoriteResponse[] = [];
+
+        if (Array.isArray(rawData)) {
+            favoritesData = rawData;
+        } else if (rawData && typeof rawData === 'object') {
+            if (Array.isArray(rawData.data)) {
+                favoritesData = rawData.data;
+            } else if (Array.isArray(rawData.documents)) {
+                favoritesData = rawData.documents;
+            }
+        }
+
         const tracks: Track[] = [];
 
-        for (const fav of favorites) {
+        for (const fav of favoritesData) {
+            if (!fav) continue; // Safety check
             if (fav.track) {
                 // Appwrite track with full data
                 tracks.push(fav.track);

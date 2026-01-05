@@ -32,7 +32,9 @@ export const playlistService = {
             return [];
         }
 
-        return (response.data || []) as unknown as Playlist[];
+        const rawData = response.data as any;
+        const playlists = Array.isArray(rawData) ? rawData : (rawData?.data || []);
+        return playlists as unknown as Playlist[];
     },
 
     /**
@@ -49,7 +51,9 @@ export const playlistService = {
             return null;
         }
 
-        return response.data as unknown as Playlist;
+        const rawData = response.data as any;
+        const playlist = (rawData?.$id) ? rawData : rawData?.data;
+        return playlist as unknown as Playlist;
     },
 
     /**
