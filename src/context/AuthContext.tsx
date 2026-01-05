@@ -72,12 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     });
                 } else {
                     // Invalid session data - logout
-                    console.warn('Invalid session data, logging out');
+                    console.warn('[Auth DEBUG] Invalid session data:', session);
                     setState({ user: null, isLoading: false, isAuthenticated: false });
                 }
             } catch (sessionError) {
                 // Session is invalid - not authenticated
-                console.warn('Session invalid during profile fetch');
+                console.warn('[Auth DEBUG] Session invalid during profile fetch:', sessionError);
                 setState({ user: null, isLoading: false, isAuthenticated: false });
             }
         }
@@ -91,16 +91,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Create session
             await account.createEmailPasswordSession(email, password);
 
-            // Create user profile in database
-            await databases.createDocument(
-                DATABASE_ID,
-                COLLECTIONS.USERS,
-                newAccount.$id,
-                {
-                    username,
-                    is_admin: false,
+            // Create user profile in database (OPTIONAL if DB exists)
+            if (DATABASE_ID && COLLECTIONS.USERS) {
+                try {
+                    await databases.createDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.USERS,
+                        newAccount.$id,
+                        {
+                            username,
+                            is_admin: false,
+                        }
+                    );
+                } catch (dbError) {
+                    console.warn('[Auth WARNING] Failed to create user profile in DB (collection might be missing):', dbError);
                 }
-            );
+            } else {
+                console.warn('[Auth WARNING] Skipping profile creation - missing DATABASE_ID or COLLECTIONS.USERS');
+            }
 
             await fetchUserProfile(newAccount.$id);
         } catch (error) {
@@ -121,24 +129,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await account.createEmailPasswordSession(email, password);
             const session = await account.get();
 
-            // Try to fetch user profile, create if missing
-            try {
-                await fetchUserProfile(session.$id);
-            } catch {
-                // User doc might not exist - create it
+            // Try to fetch user profile, create if missing (OPTIONAL)
+            if (DATABASE_ID && COLLECTIONS.USERS) {
                 try {
-                    await databases.createDocument(
-                        DATABASE_ID,
-                        COLLECTIONS.USERS,
-                        session.$id,
-                        {
-                            username: session.name || session.email.split('@')[0],
-                            is_admin: false,
-                        }
-                    );
+                    await fetchUserProfile(session.$id);
                 } catch {
-                    // Document might already exist or creation failed - proceed anyway
+                    // User doc might not exist - try to create it
+                    try {
+                        await databases.createDocument(
+                            DATABASE_ID,
+                            COLLECTIONS.USERS,
+                            session.$id,
+                            {
+                                username: session.name || session.email.split('@')[0],
+                                is_admin: false,
+                            }
+                        );
+                        await fetchUserProfile(session.$id);
+                    } catch (createError) {
+                        console.warn('[Auth WARNING] Failed to ensure user profile document:', createError);
+                        // Fallback: If we can't create/fetch doc, fetchUserProfile will handle the state update from session
+                        await fetchUserProfile(session.$id);
+                    }
                 }
+            } else {
+                console.warn('[Auth WARNING] Skipping profile fetch/creation - missing DATABASE_ID or COLLECTIONS.USERS');
+                // Force a state update with session data even without a DB profile
                 await fetchUserProfile(session.$id);
             }
         } catch (error) {

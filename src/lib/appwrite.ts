@@ -8,6 +8,13 @@ import { Client, Account, Databases, Storage, Functions, ID, Query } from 'appwr
 const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 
+console.log('[Appwrite DEBUG] Endpoint:', endpoint);
+console.log('[Appwrite DEBUG] Project ID:', projectId);
+
+if (!endpoint || endpoint.includes('localhost')) {
+    console.warn('[Appwrite WARNING] Endpoint is pointed to LOCALHOST or is empty. Requests WILL fail in production.');
+}
+
 const client = new Client()
     .setEndpoint(endpoint || 'http://localhost:5173')
     .setProject(projectId);
@@ -22,6 +29,10 @@ export { ID, Query };
 
 // Database ID constant
 export const DATABASE_ID = import.meta.env.VITE_DATABASE_ID;
+console.log('[Appwrite DEBUG] Database ID:', DATABASE_ID);
+if (!DATABASE_ID) {
+    console.warn('[Appwrite WARNING] VITE_DATABASE_ID is missing! Database features will fail.');
+}
 
 // Collection IDs - matches Appwrite database schema
 export const COLLECTIONS = {
