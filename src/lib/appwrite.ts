@@ -161,6 +161,54 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
     })();
 
     pendingProxyRequests.set(originalUrl, fetchPromise);
+    pendingProxyRequests.set(originalUrl, fetchPromise);
+    return fetchPromise;
+}
+
+/**
+ * Fetch a file directly from Appwrite Storage as a Blob URL
+ * Useful for visualization of admin-uploaded files
+ */
+export async function fetchStorageAudioBlob(fileId: string): Promise<string> {
+    const cacheKey = `storage:${fileId}`;
+
+    // Return cached blob URL if available
+    if (audioProxyCache.has(cacheKey)) {
+        return audioProxyCache.get(cacheKey)!;
+    }
+
+    // Return pending request if already in progress
+    if (pendingProxyRequests.has(cacheKey)) {
+        return pendingProxyRequests.get(cacheKey)!;
+    }
+
+    const fetchPromise = (async () => {
+        try {
+            // Generate a Storage View URL
+            const storageUrl = storage.getFileView(BUCKETS.AUDIO, fileId).toString();
+
+            console.log('[StorageProxy] Fetching file data for Blob conversion...');
+
+            // Convert to real Blob URL for perfect seeking & visualization
+            const response = await fetch(storageUrl);
+            if (!response.ok) throw new Error(`Failed to fetch file data: ${response.statusText}`);
+
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+
+            audioProxyCache.set(cacheKey, blobUrl);
+            console.log('[StorageProxy] Success: Blob URL created for storage file.');
+            return blobUrl;
+        } catch (error) {
+            console.error('[StorageProxy] Failed:', error);
+            // Fallback to direct view URL if blob fetch fails
+            return storage.getFileView(BUCKETS.AUDIO, fileId).toString();
+        } finally {
+            pendingProxyRequests.delete(cacheKey);
+        }
+    })();
+
+    pendingProxyRequests.set(cacheKey, fetchPromise);
     return fetchPromise;
 }
 

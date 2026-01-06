@@ -5,7 +5,9 @@
  */
 
 import { getTracks, searchTracks, getTracksByGenre, getTrendingTracks, getFeaturedByGenre, JAMENDO_GENRES, type JamendoTrack } from './jamendoService';
-import type { Track } from '../types';
+import { databases, COLLECTIONS, Query, storage, BUCKETS } from '../lib/appwrite';
+import { searchContent } from '../lib/functions';
+import type { Track, TrackSource } from '../types';
 
 /**
  * Convert Jamendo track to our unified Track type
@@ -47,21 +49,59 @@ export const musicService = {
         const { limit = 20, offset = 0, genre, search } = options;
 
         try {
-            let response;
+            // Parallel fetch from both sources for hybrid architecture
+            const [jamendoResponse, appwriteResponse] = await Promise.allSettled([
+                search ? searchTracks(search, limit) :
+                    (genre && genre !== 'All') ? getTracksByGenre(genre, limit) :
+                        getTracks({ limit, offset }),
 
-            if (search) {
-                response = await searchTracks(search, limit);
-            } else if (genre && genre !== 'All') {
-                response = await getTracksByGenre(genre, limit);
-            } else {
-                response = await getTracks({ limit, offset });
+                // Fetch from Appwrite (Internal) - Now using specific search function if query exists
+                search ? searchContent({ query: search, limit }) : this.getUploadedTracks()
+            ]);
+
+            let tracks: Track[] = [];
+
+            // Add Jamendo tracks
+            if (jamendoResponse.status === 'fulfilled' && jamendoResponse.value.headers.status === 'success') {
+                tracks = jamendoResponse.value.results.map(convertJamendoTrack);
             }
 
-            if (response.headers.status !== 'success') {
-                throw new Error(response.headers.error_message || 'Failed to fetch tracks');
+            // Add/Merge Appwrite tracks
+            if (appwriteResponse.status === 'fulfilled') {
+                let uploaded: Track[] = [];
+                const res = appwriteResponse.value;
+
+                // Handle both direct DB results and Function results
+                const functionResponse = (res as any)?.data;
+
+                if (Array.isArray(res)) {
+                    // Direct DB result
+                    uploaded = res.map(t => ({ ...t, source: 'appwrite' as TrackSource }));
+                } else if (functionResponse?.success && functionResponse?.results && Array.isArray(functionResponse.results.tracks)) {
+                    // Search function result format
+                    uploaded = functionResponse.results.tracks.map((t: any) => ({ ...t, source: 'appwrite' as TrackSource }));
+                } else if (functionResponse?.success && Array.isArray(functionResponse?.data)) {
+                    // Get-tracks function result format
+                    uploaded = functionResponse.data.map((t: any) => ({ ...t, source: 'appwrite' as TrackSource }));
+                }
+
+                if (search && !((appwriteResponse.value as any)?.success)) {
+                    // Fallback filtering if we didn't use the search function or it failed
+                    const searchLower = search.toLowerCase();
+                    uploaded = uploaded.filter(t =>
+                        (t.title?.toLowerCase().includes(searchLower)) ||
+                        (t.artist?.toLowerCase().includes(searchLower))
+                    );
+                }
+
+                if (genre && genre !== 'All') {
+                    uploaded = uploaded.filter(t => t.genre === genre);
+                }
+
+                tracks = [...uploaded, ...tracks];
             }
 
-            return response.results.map(convertJamendoTrack);
+            return tracks.slice(0, limit);
         } catch (error) {
             console.error('Music service error:', error);
             throw error;
@@ -121,5 +161,76 @@ export const musicService = {
     getGenres(): string[] {
         return [...JAMENDO_GENRES];
     },
+
+    /**
+     * Get uploaded tracks (Appwrite source)
+     * For Admin Dashboard
+     */
+    async getUploadedTracks(): Promise<Track[]> {
+        try {
+            // Priority: Use the Appwrite Function for the core execution
+            const functionId = import.meta.env.VITE_FUNCTION_GET_TRACKS;
+            if (functionId) {
+                const { functions } = await import('../lib/appwrite');
+                const execution = await functions.createExecution(
+                    functionId,
+                    JSON.stringify({ limit: 50 }),
+                    false
+                );
+
+                if (execution.status === 'completed' && execution.responseBody) {
+                    const result = JSON.parse(execution.responseBody);
+                    if (result.success && Array.isArray(result.data)) {
+                        return result.data as Track[];
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[MusicService] Function-based fetch failed, falling back to direct DB:', e);
+        }
+
+        // Direct DB Fallback if function fails or is missing
+        const response = await databases.listDocuments(
+            import.meta.env.VITE_DATABASE_ID,
+            COLLECTIONS.TRACKS,
+            [
+                Query.isNotNull('audio_file_id'),
+                Query.orderDesc('$createdAt')
+            ]
+        );
+        return response.documents as unknown as Track[];
+    },
+
+    /**
+     * Delete an uploaded track and its files
+     */
+    async deleteTrack(track: Track): Promise<void> {
+        if (track.source !== 'appwrite') throw new Error('Cannot delete external tracks');
+
+        // 1. Delete Audio File
+        if (track.audio_file_id) {
+            try {
+                await storage.deleteFile(BUCKETS.AUDIO, track.audio_file_id);
+            } catch (e) {
+                console.warn('Failed to delete audio file', e);
+            }
+        }
+
+        // 2. Delete Cover Image
+        if (track.cover_image_id) {
+            try {
+                await storage.deleteFile(BUCKETS.COVERS, track.cover_image_id);
+            } catch (e) {
+                console.warn('Failed to delete cover image', e);
+            }
+        }
+
+        // 3. Delete Document
+        await databases.deleteDocument(
+            import.meta.env.VITE_DATABASE_ID,
+            COLLECTIONS.TRACKS,
+            track.$id
+        );
+    }
 };
 

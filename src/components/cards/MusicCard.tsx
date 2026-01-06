@@ -64,7 +64,7 @@ export function MusicCard({ track }: MusicCardProps) {
 
     return (
         <div
-            className="group p-4 rounded-2xl bg-white/[0.03] border border-white/5 cursor-pointer transition-all duration-500 hover:bg-white/10 hover:border-white/10"
+            className="group p-4 rounded-2xl bg-secondary border border-theme cursor-pointer transition-all duration-500 hover:bg-hover hover:border-accent/20"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => play(track)}
@@ -142,16 +142,15 @@ export function MusicCard({ track }: MusicCardProps) {
                 )}
             </div>
 
-            {/* Track Info - Improved Contrast */}
             <div className="space-y-1 px-1">
-                <h3 className={`font-bold text-base truncate transition-colors ${isCurrentTrack ? 'text-[var(--gold)]' : 'text-white group-hover:text-[var(--gold)]'}`}>
+                <h3 className={`font-bold text-base truncate transition-colors ${isCurrentTrack ? 'text-accent' : 'text-primary group-hover:text-accent'}`}>
                     {track.title}
                 </h3>
-                <p className="text-sm font-medium text-white/50 group-hover:text-white/70 transition-colors truncate">
+                <p className="text-sm font-medium text-secondary group-hover:text-primary transition-colors truncate">
                     {track.artist}
                 </p>
                 {track.source === 'jamendo' && (
-                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-white/20 px-1.5 py-0.5 rounded border border-white/10 mt-1">
+                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded border border-theme mt-1">
                         Jamendo
                     </span>
                 )}

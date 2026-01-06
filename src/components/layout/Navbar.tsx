@@ -46,13 +46,13 @@ export function Navbar() {
         >
             {/* Search Bar - improved visibility */}
             <form onSubmit={handleSearch} className="relative w-full max-w-md hidden md:block">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
                 <input
                     type="text"
                     placeholder="Search tracks, podcasts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-2.5 rounded-full bg-white/15 text-white placeholder:text-white/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/60 focus:bg-white/20 transition-all duration-300"
+                    className="w-full pl-12 pr-4 py-2.5 rounded-full bg-secondary text-primary placeholder:text-muted border border-theme focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/60 focus:bg-hover transition-all duration-300"
                 />
             </form>
 
@@ -62,7 +62,7 @@ export function Navbar() {
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setShowDropdown(!showDropdown)}
-                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 active:scale-95"
+                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-secondary border border-theme hover:bg-hover transition-all duration-300 active:scale-95"
                         >
                             <div className="w-8 h-8 rounded-full bg-[var(--gold)]/20 flex items-center justify-center border border-[var(--gold)]/30">
                                 {user?.avatar_url ? (
@@ -71,8 +71,8 @@ export function Navbar() {
                                     <User size={18} className="text-[var(--gold)]" />
                                 )}
                             </div>
-                            <span className="text-sm font-semibold text-white/90 hidden sm:inline-block">{user?.username}</span>
-                            <ChevronDown size={14} className={`text-white/50 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
+                            <span className="text-sm font-semibold text-primary hidden sm:inline-block">{user?.username}</span>
+                            <ChevronDown size={14} className={`text-secondary transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
                         </button>
 
                         <AnimatePresence>
@@ -81,11 +81,11 @@ export function Navbar() {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="absolute right-0 top-full mt-2 w-48 glass rounded-lg overflow-hidden shadow-xl"
+                                    className="absolute right-0 top-full mt-2 w-48 bg-paper border border-theme rounded-lg overflow-hidden shadow-xl z-50"
                                 >
                                     <Link
                                         to="/profile"
-                                        className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-white/5 transition-colors"
+                                        className="flex items-center gap-2 px-4 py-3 text-sm text-primary hover:bg-hover transition-colors"
                                         onClick={() => setShowDropdown(false)}
                                     >
                                         <User size={16} />
@@ -93,7 +93,7 @@ export function Navbar() {
                                     </Link>
                                     <button
                                         onClick={handleLogout}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-error hover:bg-white/5 transition-colors"
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-error hover:bg-hover transition-colors text-left"
                                     >
                                         <LogOut size={16} />
                                         Logout

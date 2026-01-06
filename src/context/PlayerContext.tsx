@@ -3,7 +3,7 @@
  * Global audio player state management with Spotify-like queue functionality
  */
 import { createContext, useContext, useReducer, useRef, useEffect, useState, type ReactNode } from 'react';
-import { storage, BUCKETS, getProxiedAudioUrlSync, fetchProxiedAudioBlob, isAudioProxied } from '../lib/appwrite';
+import { storage, BUCKETS, getProxiedAudioUrlSync, fetchProxiedAudioBlob, isAudioProxied, fetchStorageAudioBlob } from '../lib/appwrite';
 import { historyService } from '../services';
 import type { PlayableItem, PlayerState } from '../types';
 
@@ -23,7 +23,9 @@ type PlayerAction =
     | { type: 'TOGGLE_REPEAT' }
     | { type: 'TOGGLE_MOOD_LIGHT' }
     | { type: 'TOGGLE_FULLSCREEN' }
-    | { type: 'TOGGLE_AUDIO_CANVAS' };
+    | { type: 'TOGGLE_AUDIO_CANVAS' }
+    | { type: 'REMOVE_FROM_QUEUE'; payload: string }
+    | { type: 'CLEAR_QUEUE' };
 
 interface PlayerContextType extends PlayerState {
     play: (item: PlayableItem) => void;
@@ -41,6 +43,8 @@ interface PlayerContextType extends PlayerState {
     toggleMoodLight: () => void;
     toggleFullscreen: () => void;
     toggleAudioCanvas: () => void;
+    removeFromQueue: (trackId: string) => void;
+    clearQueue: () => void;
     audio: HTMLAudioElement;
     audioRef: React.RefObject<HTMLAudioElement | null>;
     showMoodLight: boolean;
@@ -156,6 +160,20 @@ function playerReducer(state: LocalState, action: PlayerAction): LocalState {
             return { ...state, showFullscreen: !state.showFullscreen };
         case 'TOGGLE_AUDIO_CANVAS':
             return { ...state, showAudioCanvas: !state.showAudioCanvas };
+        case 'REMOVE_FROM_QUEUE': {
+            const trackIdToRemove = action.payload;
+            const newQueue = state.queue.filter(t => t.$id !== trackIdToRemove);
+
+            // If we removed the currently playing track, we might want to skip to next
+            // but usually remove just removes it from the list. 
+            // If the track being removed is current, we keep it playing but it's no longer in queue.
+            // This matches Spotify behavior (removing current track from queue doesn't stop playback).
+            return { ...state, queue: newQueue };
+        }
+        case 'CLEAR_QUEUE':
+            // Keep current track but clear everything else? Or clear everything?
+            // Spotify keeps current track.
+            return { ...state, queue: state.currentTrack ? [state.currentTrack] : [] };
         default:
             return state;
     }
@@ -341,14 +359,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                     }
 
                     // 4. Background Proxy Upgrade (for Visualization)
-                    if (isExternalSource && !isAudioProxied(originalExternalUrl!) && playbackRequestId.current === currentRequestId) {
+                    if (playbackRequestId.current === currentRequestId) {
                         try {
-                            // Fetch blob in background
-                            const blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
+                            let blobUrl = '';
 
-                            // Check if still playing the same track
-                            if (playbackRequestId.current === currentRequestId && currentAudio.src !== blobUrl) {
-                                console.log('[Player] Upgrading to proxied blob for visualization');
+                            // If it's external, check if we need proxy
+                            if (isExternalSource && !isAudioProxied(originalExternalUrl!)) {
+                                blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
+                            }
+                            // If it's Appwrite storage, fetch blob for best visualization support
+                            else if (!isExternalSource && !audioUrl.startsWith('blob:')) {
+                                const fileId = state.currentTrack!.audio_file_id!;
+                                blobUrl = await fetchStorageAudioBlob(fileId);
+                            }
+
+                            // If we got a blob URL, upgrade the audio src
+                            if (blobUrl && playbackRequestId.current === currentRequestId && currentAudio.src !== blobUrl) {
+                                console.log('[Player] Upgrading to proxied/storage blob for visualization');
                                 const currentTime = currentAudio.currentTime;
                                 const wasPlaying = !currentAudio.paused;
 
@@ -366,7 +393,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                                 }
                             }
                         } catch (err) {
-                            console.warn('[Player] Proxy upgrade failed, continuing with original:', err);
+                            console.warn('[Player] Blob upgrade failed, continuing with original:', err);
                         }
                     }
 
@@ -527,6 +554,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'TOGGLE_AUDIO_CANVAS' });
     }
 
+    function removeFromQueue(trackId: string) {
+        dispatch({ type: 'REMOVE_FROM_QUEUE', payload: trackId });
+    }
+
+    function clearQueue() {
+        dispatch({ type: 'CLEAR_QUEUE' });
+    }
+
     return (
         <PlayerContext.Provider
             value={{
@@ -545,6 +580,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                 toggleMoodLight,
                 toggleFullscreen,
                 toggleAudioCanvas,
+                removeFromQueue,
+                clearQueue,
                 audio,
                 audioRef,
                 showMoodLight: state.showMoodLight,

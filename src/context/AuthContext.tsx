@@ -46,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function fetchUserProfile(userId: string) {
         console.log('[Auth] fetchUserProfile started for:', userId);
         try {
+            // Fetch session labels to determine admin status (Priority over DB)
+            const session = await account.get();
+            const hasAdminLabel = session.labels?.includes('admin') || false;
+
             console.log('[Auth] Getting document from:', DATABASE_ID, COLLECTIONS.USERS, userId);
             const profile = await databases.getDocument(
                 DATABASE_ID,
@@ -53,9 +57,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 userId
             ) as unknown as User;
 
-            console.log('[Auth] fetchUserProfile success:', profile);
+            // Sync admin status if label exists but DB flag is false
+            let finalProfile = profile;
+            if (hasAdminLabel && !profile.is_admin) {
+                console.log('[Auth] Syncing Admin Label: Updating DB is_admin to true');
+                try {
+                    finalProfile = await databases.updateDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.USERS,
+                        userId,
+                        { is_admin: true }
+                    ) as unknown as User;
+                } catch (e) {
+                    console.warn('[Auth] Failed to sync admin status to DB, using local override', e);
+                    finalProfile = { ...profile, is_admin: true };
+                }
+            }
+
+            console.log('[Auth] fetchUserProfile success:', finalProfile);
             setState({
-                user: profile,
+                user: finalProfile,
                 isLoading: false,
                 isAuthenticated: true,
             });
@@ -65,10 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Critical Change: Do NOT create a fake user state.
             // Try to recover by creating the profile if the session exists
             try {
-                const session = await account.get();
+                const session = await account.get(); // Re-fetch session if we didn't get it above
                 console.log('[Auth] Recovery: Found session for recovery:', session.$id);
                 if (session && session.$id === userId) {
                     console.log('[Auth] Valid session exists, attempting to create missing profile...');
+
+                    const hasAdminLabel = session.labels?.includes('admin') || false;
+
                     // Attempt to create the missing document
                     await databases.createDocument(
                         DATABASE_ID,
@@ -76,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         userId, // Use userId as document ID
                         {
                             username: session.name || session.email.split('@')[0],
-                            is_admin: false,
+                            is_admin: hasAdminLabel,
                         }
                     );
 

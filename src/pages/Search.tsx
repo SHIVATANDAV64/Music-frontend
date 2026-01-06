@@ -63,10 +63,10 @@ export function Search() {
                     <SearchIcon size={24} className="text-accent" />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-display font-bold">Search</h1>
+                    <h1 className="text-3xl font-display font-bold text-primary">Search</h1>
                     {query && (
-                        <p className="text-text-secondary">
-                            Results for <span className="text-white">"{query}"</span>
+                        <p className="text-secondary">
+                            Results for <span className="text-accent font-medium">"{query}"</span>
                         </p>
                     )}
                 </div>
@@ -78,9 +78,9 @@ export function Search() {
                     animate={{ opacity: 1 }}
                     className="text-center py-16"
                 >
-                    <SearchIcon size={48} className="mx-auto text-white/50 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2 text-white">Search for music & podcasts</h3>
-                    <p className="text-white/60">Use the search bar above to find tracks and shows</p>
+                    <SearchIcon size={48} className="mx-auto text-secondary/50 mb-4" />
+                    <h3 className="text-xl font-semibold mb-2 text-primary">Search for music & podcasts</h3>
+                    <p className="text-secondary">Use the search bar above to find tracks and shows</p>
                 </motion.div>
             ) : isLoading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -98,9 +98,9 @@ export function Search() {
                     animate={{ opacity: 1 }}
                     className="text-center py-16"
                 >
-                    <SearchIcon size={48} className="mx-auto text-text-secondary/50 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No results found</h3>
-                    <p className="text-text-secondary">Try searching for something else</p>
+                    <SearchIcon size={48} className="mx-auto text-secondary/50 mb-4" />
+                    <h3 className="text-xl font-semibold mb-2 text-primary">No results found</h3>
+                    <p className="text-secondary">Try searching for something else</p>
                 </motion.div>
             ) : (
                 <>
@@ -112,7 +112,7 @@ export function Search() {
                                 onClick={() => setActiveTab(tab as typeof activeTab)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${activeTab === tab
                                     ? 'bg-accent text-white'
-                                    : 'bg-white/5 text-text-secondary hover:text-white hover:bg-white/10'
+                                    : 'bg-secondary text-secondary hover:text-primary hover:bg-hover'
                                     }`}
                             >
                                 {tab}
@@ -125,7 +125,7 @@ export function Search() {
                         <section>
                             <div className="flex items-center gap-2 mb-4">
                                 <Music size={20} className="text-accent" />
-                                <h2 className="text-xl font-semibold text-white">Tracks</h2>
+                                <h2 className="text-xl font-semibold text-primary">Tracks</h2>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {tracks.map((track) => (
@@ -138,8 +138,8 @@ export function Search() {
                     {(activeTab === 'all' || activeTab === 'podcasts') && podcasts.length > 0 && (
                         <section>
                             <div className="flex items-center gap-2 mb-4">
-                                <Mic2 size={20} className="text-green-400" />
-                                <h2 className="text-xl font-semibold">Podcasts</h2>
+                                <Mic2 size={20} className="text-accent" />
+                                <h2 className="text-xl font-semibold text-primary">Podcasts</h2>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 {podcasts.map((podcast) => (

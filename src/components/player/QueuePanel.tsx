@@ -4,6 +4,7 @@
  * Shows upcoming tracks with artwork, drag-to-reorder (future), remove
  */
 import { X, GripVertical, Play } from 'lucide-react';
+import { Reorder, AnimatePresence } from 'framer-motion';
 import { usePlayer } from '../../context/PlayerContext';
 import { getTrackCoverUrl } from '../../utils/trackUtils';
 import type { Track, PlayableItem } from '../../types';
@@ -19,7 +20,7 @@ function isTrack(item: PlayableItem): item is Track {
 }
 
 export function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
-    const { queue, currentTrack, play, isPlaying } = usePlayer();
+    const { queue, currentTrack, play, isPlaying, removeFromQueue, clearQueue, setQueue } = usePlayer();
 
     if (!isOpen) return null;
 
@@ -39,6 +40,12 @@ export function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
             return item.artist;
         }
         return 'Podcast';
+    };
+
+    const handleReorder = (newUpcoming: PlayableItem[]) => {
+        const currentIdx = queue.findIndex(t => t.$id === currentTrack?.$id);
+        const played = currentIdx >= 0 ? queue.slice(0, currentIdx + 1) : [];
+        setQueue([...played, ...newUpcoming]);
     };
 
     return (
@@ -97,9 +104,19 @@ export function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
 
             {/* Upcoming */}
             <div className="flex-1 overflow-y-auto p-4">
-                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">
-                    Up Next ({upcomingTracks.length})
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                        Up Next ({upcomingTracks.length})
+                    </p>
+                    {upcomingTracks.length > 0 && (
+                        <button
+                            onClick={clearQueue}
+                            className="text-xs text-error hover:underline transition-all"
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
 
                 {upcomingTracks.length === 0 ? (
                     <div className="text-center py-8 text-[var(--text-muted)]">
@@ -107,59 +124,78 @@ export function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
                         <p className="text-sm mt-1">Add songs to your queue</p>
                     </div>
                 ) : (
-                    <div className="space-y-1">
-                        {upcomingTracks.map((track, idx) => (
-                            <div
-                                key={`${track.$id}-${idx}`}
-                                className="group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors"
-                                onClick={() => play(track)}
-                            >
-                                {/* Drag handle (visual only for now) */}
-                                <GripVertical size={14} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-50" />
-
-                                {/* Album Art */}
-                                <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-[var(--bg-surface)]">
-                                    {getCoverUrl(track) ? (
-                                        <img
-                                            src={getCoverUrl(track) || ''}
-                                            alt={track.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">🎵</div>
-                                    )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-sm font-medium text-[var(--text-primary)] truncate group-hover:text-[var(--gold)] transition-colors">
-                                        {track.title}
-                                    </h4>
-                                    <p className="text-xs text-[var(--text-muted)] truncate">
-                                        {getArtist(track)}
-                                    </p>
-                                </div>
-
-                                {/* Remove button (Desktop) */}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        // TODO: Implement remove from queue
-                                        console.log('Remove from queue clicked');
-                                    }}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-red-500 hover:bg-white/10 transition-all"
-                                    title="Remove from queue"
+                    <Reorder.Group
+                        axis="y"
+                        values={upcomingTracks}
+                        onReorder={handleReorder}
+                        className="space-y-1"
+                    >
+                        <AnimatePresence>
+                            {upcomingTracks.map((track) => (
+                                <Reorder.Item
+                                    key={track.$id}
+                                    value={track}
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="group flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors active:scale-[0.98] select-none"
                                 >
-                                    <X size={14} />
-                                </button>
+                                    {/* Drag handle */}
+                                    <div className="cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <GripVertical size={14} className="text-[var(--text-muted)]" />
+                                    </div>
 
-                                {/* Play on hover */}
-                                <button className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 bg-[var(--gold)] text-black transition-opacity">
-                                    <Play size={14} fill="currentColor" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                                    {/* Album Art */}
+                                    <div
+                                        className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-[var(--bg-surface)]"
+                                        onClick={() => play(track)}
+                                    >
+                                        {getCoverUrl(track) ? (
+                                            <img
+                                                src={getCoverUrl(track) || ''}
+                                                alt={track.title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">🎵</div>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0" onClick={() => play(track)}>
+                                        <h4 className="text-sm font-medium text-[var(--text-primary)] truncate group-hover:text-[var(--gold)] transition-colors">
+                                            {track.title}
+                                        </h4>
+                                        <p className="text-xs text-[var(--text-muted)] truncate">
+                                            {getArtist(track)}
+                                        </p>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeFromQueue(track.$id);
+                                            }}
+                                            className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-error hover:bg-error/10 transition-all"
+                                            title="Remove from queue"
+                                        >
+                                            <X size={14} />
+                                        </button>
+
+                                        <button
+                                            onClick={() => play(track)}
+                                            className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 bg-[var(--gold)] text-black transition-all hover:scale-110"
+                                        >
+                                            <Play size={12} fill="currentColor" />
+                                        </button>
+                                    </div>
+                                </Reorder.Item>
+                            ))}
+                        </AnimatePresence>
+                    </Reorder.Group>
                 )}
             </div>
 

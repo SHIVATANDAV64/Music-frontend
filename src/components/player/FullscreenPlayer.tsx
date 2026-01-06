@@ -279,22 +279,22 @@ export function FullscreenPlayer({
                     </div>
 
                     {/* Scrubber Row */}
-                    <div className="flex items-center gap-4 mb-6">
-                        <span className="text-xs font-mono text-white/50 w-10 text-right">
+                    <div className="flex items-center gap-4 mb-6 w-full max-w-full">
+                        <span className="text-xs font-mono text-white/50 w-10 text-right shrink-0">
                             {formatTime(currentTime)}
                         </span>
 
                         {/* Interactive Waveform Scrubber */}
-                        <div className="flex-1 h-12 relative group">
+                        <div className="flex-1 h-12 relative group min-w-0">
                             <BreathingWaveform
                                 height={48}
                                 color={themeColor}
                                 showProgress={true}
-                                className="opacity-80 group-hover:opacity-100 transition-opacity"
+                                className="opacity-80 group-hover:opacity-100 transition-opacity w-full"
                             />
                         </div>
 
-                        <span className="text-xs font-mono text-white/50 w-10">
+                        <span className="text-xs font-mono text-white/50 w-10 shrink-0">
                             {formatTime(duration)}
                         </span>
                     </div>
