@@ -127,11 +127,21 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
                 throw new Error(result.error || 'Proxy failed to return file ID');
             }
 
-            // Generate a stable Storage View URL (this has native CORS support)
-            const blobUrl = storage.getFileView(BUCKETS.AUDIO, result.fileId).toString();
+            // Generate a Storage View URL
+            const storageUrl = storage.getFileView(BUCKETS.AUDIO, result.fileId).toString();
+
+            console.log('[AudioProxy] Fetching file data for real Blob conversion...');
+
+            // Convert to real Blob URL for perfect seeking & visualization
+            const response = await fetch(storageUrl);
+            if (!response.ok) throw new Error(`Failed to fetch file data: ${response.statusText}`);
+
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+
             audioProxyCache.set(originalUrl, blobUrl);
 
-            console.log('[AudioProxy] Success: Visualization enabled via Storage Cache.');
+            console.log('[AudioProxy] Success: Real Blob URL created. Perfect seeking enabled.');
             return blobUrl;
 
 

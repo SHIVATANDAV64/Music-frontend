@@ -337,7 +337,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                         // History recording
                         const isEpisode = 'episode_id' in state.currentTrack!;
                         const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
-                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource);
+                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource, state.currentTrack!);
                     }
 
                     // 4. Background Proxy Upgrade (for Visualization)
@@ -354,7 +354,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
                                 currentAudio.crossOrigin = 'anonymous';
                                 currentAudio.src = blobUrl;
-                                currentAudio.currentTime = currentTime;
+                                // Use targetSeek to ensures position is restored once metadata loads
+                                (currentAudio as any)._targetSeek = currentTime;
 
                                 if (wasPlaying) {
                                     const resumePromise = currentAudio.play();
@@ -390,6 +391,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
                                         audio.load();
                                         await audio.play();
                                         dispatch({ type: 'PLAY' });
+                                        const isEpisode = 'episode_id' in state.currentTrack!;
+                                        const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
+                                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource, state.currentTrack!);
                                         return; // Recovered successfully
                                     }
                                 } catch (proxyErr) {

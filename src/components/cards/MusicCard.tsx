@@ -6,11 +6,12 @@
  * No overlays cluttering the art - it needs to breathe.
  */
 import { useState } from 'react';
-import { Play, Pause, Heart, Plus } from 'lucide-react';
+import { Play, Pause, Heart, Plus, ListPlus } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { getTrackCoverUrl } from '../../utils/trackUtils';
 import { favoritesService } from '../../services/favorites.service';
 import { useAuth } from '../../context/AuthContext';
+import { PlaylistSelector } from '../player/PlaylistSelector';
 import type { Track } from '../../types';
 
 interface MusicCardProps {
@@ -23,6 +24,7 @@ export function MusicCard({ track }: MusicCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAddingFavorite, setIsAddingFavorite] = useState(false);
+    const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
 
     const isCurrentTrack = currentTrack?.$id === track.$id;
     const isPlayingThis = isCurrentTrack && isPlaying;
@@ -45,8 +47,8 @@ export function MusicCard({ track }: MusicCardProps) {
 
         setIsAddingFavorite(true);
         try {
-            // Use toggleFavorite with correct signature: (userId, Track)
-            const newState = await favoritesService.toggleFavorite(user.$id, track);
+            // Use toggleFavorite with correct signature: (Track)
+            const newState = await favoritesService.toggleFavorite(track);
             setIsFavorite(newState);
         } catch (err) {
             console.error('Failed to toggle favorite:', err);
@@ -62,127 +64,100 @@ export function MusicCard({ track }: MusicCardProps) {
 
     return (
         <div
-            className="group p-5 rounded-2xl bg-[#111111] border border-white/5 cursor-pointer transition-all duration-500 hover:bg-[#151515] hover:border-[#c9a962]/20"
+            className="group p-4 rounded-2xl bg-white/[0.03] border border-white/5 cursor-pointer transition-all duration-500 hover:bg-white/10 hover:border-white/10"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => play(track)}
             style={{
-                boxShadow: isPlayingThis
-                    ? '0 0 40px rgba(201, 169, 98, 0.15)'
-                    : 'none',
                 transform: isHovered ? 'translateY(-4px)' : 'none',
             }}
         >
-            {/* Album Art - THE SOUL - Large and breathing */}
-            <div
-                className="relative aspect-square rounded-xl overflow-hidden mb-5"
-                style={{
-                    boxShadow: isPlayingThis
-                        ? '0 8px 32px rgba(201, 169, 98, 0.2)'
-                        : '0 8px 32px rgba(255, 255, 255, 0.3)',
-                }}
-            >
-                {coverUrl ? (
-                    <img
-                        src={coverUrl}
-                        alt={track.title}
-                        className="w-full h-full object-cover transition-transform duration-700"
-                        style={{
-                            transform: isHovered ? 'scale(1.05)' : 'scale(1)',
-                        }}
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center">
-                        <span className="text-5xl">🎵</span>
-                    </div>
-                )}
-
-                {/* Subtle dark overlay on hover - not blocking the art */}
-                <div
-                    className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300"
-                    style={{ opacity: isHovered || isPlayingThis ? 1 : 0 }}
+            {/* Album Art - responsive container */}
+            <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-2xl group/art">
+                <img
+                    src={coverUrl || ''}
+                    alt={track.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
                 />
 
-                {/* Action Buttons Row - Appears on hover */}
-                <div
-                    className="absolute bottom-3 right-3 flex items-center gap-2 transition-all duration-300"
-                    style={{
-                        opacity: isHovered || isPlayingThis ? 1 : 0,
-                        transform: isHovered || isPlayingThis ? 'translateY(0)' : 'translateY(8px)',
-                    }}
-                >
-                    {/* Add to Queue */}
-                    <button
-                        onClick={handleAddToQueue}
-                        className="w-9 h-9 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
-                        aria-label="Add to queue"
-                        title="Add to queue"
-                    >
-                        <Plus size={16} className="text-white" />
-                    </button>
-
-                    {/* Favorite */}
+                {/* Overlays - Improved Visibility */}
+                <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 flex items-center justify-center gap-3 ${isHovered || isPlayingThis ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         onClick={handleFavoriteClick}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors ${isFavorite
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-white/10 text-white hover:bg-white/20'
+                        disabled={isAddingFavorite}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border ${isFavorite
+                            ? 'bg-[var(--gold)] border-[var(--gold)] text-black'
+                            : 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-110'
                             }`}
-                        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                         title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                        <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
+                        <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} className={isAddingFavorite ? 'animate-pulse' : ''} />
                     </button>
 
-                    {/* Play Button */}
                     <button
                         onClick={handlePlayClick}
-                        className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
-                        style={{ background: '#c9a962' }}
-                        aria-label={isPlayingThis ? 'Pause' : 'Play'}
+                        className="w-14 h-14 rounded-full bg-[var(--gold)] text-black flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
+                        title="Play"
                     >
                         {isPlayingThis ? (
-                            <Pause size={20} fill="#0a0a0a" className="text-[#0a0a0a]" />
+                            <Pause size={24} fill="currentColor" />
                         ) : (
-                            <Play size={20} fill="#0a0a0a" className="text-[#0a0a0a] ml-0.5" />
+                            <Play size={24} fill="currentColor" className="ml-1" />
                         )}
+                    </button>
+
+                    <button
+                        onClick={handleAddToQueue}
+                        className="w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center backdrop-blur-md hover:bg-white/20 hover:scale-110 transition-all"
+                        title="Add to queue"
+                    >
+                        <Plus size={18} />
+                    </button>
+
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPlaylistSelector(true);
+                        }}
+                        className="w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center backdrop-blur-md hover:bg-white/20 hover:scale-110 transition-all"
+                        title="Add to playlist"
+                    >
+                        <ListPlus size={18} />
                     </button>
                 </div>
 
-                {/* Now Playing Indicator - Minimal, top left */}
+                {/* Playlist Selector Modal */}
+                <PlaylistSelector
+                    isOpen={showPlaylistSelector}
+                    onClose={() => setShowPlaylistSelector(false)}
+                    track={track}
+                />
+
+                {/* Mobile/Compact indicator for currently playing */}
                 {isPlayingThis && (
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#c9a962]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a] animate-pulse" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#0a0a0a]">
-                            Playing
-                        </span>
+                    <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[var(--gold)] flex items-center justify-center text-black shadow-lg animate-pulse md:hidden">
+                        <Pause size={14} fill="currentColor" />
                     </div>
                 )}
             </div>
 
-            {/* Track Info - Clear hierarchy, no clutter */}
-            <div className="space-y-1.5">
-                <h3
-                    className="font-semibold text-base truncate transition-colors duration-300"
-                    style={{ color: isCurrentTrack ? '#c9a962' : '#fafaf5' }}
-                >
+            {/* Track Info - Improved Contrast */}
+            <div className="space-y-1 px-1">
+                <h3 className={`font-bold text-base truncate transition-colors ${isCurrentTrack ? 'text-[var(--gold)]' : 'text-white group-hover:text-[var(--gold)]'}`}>
                     {track.title}
                 </h3>
-                <p className="text-sm text-[#fafaf5]/50 truncate">
+                <p className="text-sm font-medium text-white/50 group-hover:text-white/70 transition-colors truncate">
                     {track.artist}
                 </p>
-            </div>
-
-            {/* Genre Tag - Uses sage for secondary accent */}
-            {track.genre && (
-                <div className="mt-3">
-                    <span className="inline-block px-2.5 py-1 text-[10px] rounded-full bg-[#4a5e4a]/20 text-[#4a5e4a] uppercase tracking-wider font-medium">
-                        {track.genre}
+                {track.source === 'jamendo' && (
+                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-white/20 px-1.5 py-0.5 rounded border border-white/10 mt-1">
+                        Jamendo
                     </span>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }
+
 

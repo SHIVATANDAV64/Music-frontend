@@ -15,6 +15,7 @@ import { BreathingWaveform } from './BreathingWaveform';
 import { favoritesService } from '../../services/favorites.service';
 import { useAuth } from '../../context/AuthContext';
 import { QueuePanel } from './QueuePanel';
+import { useRef } from 'react';
 
 interface FullscreenPlayerProps {
     trackName: string | null;
@@ -53,6 +54,68 @@ export function FullscreenPlayer({
     const [isAddingFavorite, setIsAddingFavorite] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
 
+    // Resize Logic
+    const [width, setWidth] = useState<number>(768); // Default max-w-3xl approx
+    const [height, setHeight] = useState<number>(200); // Default comfortable height
+    const resizingDirection = useRef<'left' | 'right' | 'top' | null>(null);
+    const startX = useRef(0);
+    const startY = useRef(0);
+    const startWidth = useRef(0);
+    const startHeight = useRef(0);
+    const dockRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleMouseMove(e: MouseEvent) {
+            if (!resizingDirection.current) return;
+
+            if (resizingDirection.current === 'right') {
+                const delta = (e.clientX - startX.current) * 2;
+                const newWidth = Math.max(320, Math.min(window.innerWidth - 32, startWidth.current + delta));
+                setWidth(newWidth);
+            } else if (resizingDirection.current === 'left') {
+                const delta = (startX.current - e.clientX) * 2; // Inverted for left side
+                const newWidth = Math.max(320, Math.min(window.innerWidth - 32, startWidth.current + delta));
+                setWidth(newWidth);
+            } else if (resizingDirection.current === 'top') {
+                // For fullscreen dock, dragging UP increases height
+                const delta = startY.current - e.clientY;
+                const newHeight = Math.max(160, Math.min(600, startHeight.current + delta));
+                setHeight(newHeight);
+            }
+        }
+
+        function handleMouseUp() {
+            resizingDirection.current = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
+
+    const handleResizeStart = (e: React.MouseEvent, direction: 'left' | 'right' | 'top') => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizingDirection.current = direction;
+
+        startX.current = e.clientX;
+        startY.current = e.clientY;
+        startWidth.current = width;
+        startHeight.current = height;
+
+        if (direction === 'top') {
+            document.body.style.cursor = 'ns-resize';
+        } else {
+            document.body.style.cursor = 'ew-resize';
+        }
+        document.body.style.userSelect = 'none';
+    };
+
     // Format time helper: 0:00
     const formatTime = (t: number) => {
         if (!Number.isFinite(t)) return '0:00';
@@ -84,7 +147,7 @@ export function FullscreenPlayer({
         if (!user || !currentTrack || isAddingFavorite) return;
         setIsAddingFavorite(true);
         try {
-            const newState = await favoritesService.toggleFavorite(user.$id, currentTrack as any);
+            const newState = await favoritesService.toggleFavorite(currentTrack as any);
             setIsFavorite(newState);
         } catch (err) {
             console.error('Failed to toggle favorite:', err);
@@ -183,7 +246,37 @@ export function FullscreenPlayer({
             <div className="relative z-50 w-full pb-12 px-6 md:px-12 flex flex-col items-center">
 
                 {/* Glass Dock Container */}
-                <div className="w-full max-w-3xl backdrop-blur-xl bg-black/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl ring-1 ring-white/5">
+                <div
+                    ref={dockRef}
+                    style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100vw' }}
+                    className="relative backdrop-blur-xl bg-black/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl ring-1 ring-white/5 flex flex-col justify-center"
+                >
+                    {/* Resize Handles */}
+                    {/* Vertical (Top) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'top')}
+                        className="absolute left-10 right-10 -top-1 h-3 cursor-ns-resize z-50 flex items-center justify-center group/handle transition-opacity"
+                        title="Drag to resize height"
+                    >
+                        <div className="w-16 h-1 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                    </div>
+
+                    {/* Horizontal (Right) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'right')}
+                        className="absolute -right-1 top-10 bottom-10 w-3 cursor-ew-resize z-50 flex items-center justify-center group/handle transition-opacity"
+                        title="Drag to resize width"
+                    >
+                        <div className="w-1 h-12 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                    </div>
+
+                    {/* Horizontal (Left) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'left')}
+                        className="absolute -left-1 top-10 bottom-10 w-3 cursor-ew-resize z-50 flex items-center justify-center group/handle transition-opacity"
+                    >
+                        <div className="w-1 h-12 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                    </div>
 
                     {/* Scrubber Row */}
                     <div className="flex items-center gap-4 mb-6">

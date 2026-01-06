@@ -19,7 +19,7 @@ import type { Track, Podcast } from '../types';
 import type { RecentlyPlayedItem } from '../services/history.service';
 
 export function Home() {
-    const { play, isPlaying, currentTrack, setQueue } = usePlayer();
+    const { play, isPlaying, setQueue } = usePlayer();
     const [tracks, setTracks] = useState<Track[]>([]);
     const [featured, setFeatured] = useState<Track | null>(null);
     const [podcasts, setPodcasts] = useState<Podcast[]>([]);
@@ -54,9 +54,6 @@ export function Home() {
         loadData();
     }, []);
 
-    const featuredCoverUrl = featured?.cover_image_id
-        ? storage.getFilePreview(BUCKETS.COVERS, featured.cover_image_id, 600, 600).toString()
-        : null;
 
     return (
         <div className="relative min-h-screen">

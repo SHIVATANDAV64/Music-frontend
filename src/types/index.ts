@@ -71,6 +71,7 @@ export interface Playlist extends AppwriteDocument {
     description?: string;
     is_public: boolean;
     cover_image_id?: string;
+    tracks?: Track[]; // Inflated by service
 }
 
 // Playlist track join table

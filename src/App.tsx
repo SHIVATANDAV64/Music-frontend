@@ -20,7 +20,8 @@ import {
   Playlists,
   AdminUpload,
   Profile,
-  Favorites
+  Favorites,
+  Settings
 } from './pages';
 import History from './pages/History';
 
@@ -64,6 +65,7 @@ function App() {
                   <Route path="/favorites" element={<Favorites />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
 
                   {/* Admin only route */}
                   <Route

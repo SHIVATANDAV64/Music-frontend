@@ -27,12 +27,14 @@ export const historyService = {
     async recordPlay(
         itemId: string,
         isEpisode: boolean = false,
-        _trackSource: 'jamendo' | 'appwrite' = 'jamendo' // Reserved for future track source recording
+        _trackSource: 'jamendo' | 'appwrite' = 'jamendo',
+        metadata?: any
     ): Promise<boolean> {
         const response = await recordHistory<{ success: boolean }>({
             action: 'record',
             itemId,
             isEpisode,
+            metadata,
         });
         return response.success;
     },
@@ -59,7 +61,7 @@ export const historyService = {
      * Get recently played items for the current user
      */
     async getRecentlyPlayed(limit: number = 20): Promise<RecentlyPlayedItem[]> {
-        const response = await recordHistory<RecentlyPlayedItem[]>({
+        const response = await recordHistory<any>({
             action: 'get_history',
             limit,
         });
@@ -68,7 +70,15 @@ export const historyService = {
             return [];
         }
 
-        return response.data;
+        // Handle double-wrapped data from Appwrite Function
+        const data = response.data;
+        if (Array.isArray(data)) return data;
+        if (data && typeof data === 'object') {
+            if (Array.isArray(data.data)) return data.data;
+            if (Array.isArray(data.documents)) return data.documents;
+        }
+
+        return [];
     },
 
     /**

@@ -11,10 +11,10 @@ import {
     Maximize2, ListMusic
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
-import { getTrackCoverUrl } from '../../utils/trackUtils';
-import { CymaticsVisualizer, VisualizerToggle } from '../ui/CymaticsVisualizer';
+import { VisualizerToggle } from '../ui/CymaticsVisualizer';
 import { BreathingWaveform } from './BreathingWaveform';
 import { QueuePanel } from './QueuePanel';
+import { useRef, useEffect } from 'react';
 import type { Track, Episode } from '../../types';
 
 function formatTime(seconds: number): string {
@@ -48,12 +48,64 @@ export function AudioPlayer() {
     } = usePlayer();
 
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('chladni');
-    const [isHovering, setIsHovering] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
+
+    // Resize Logic
+    const [width, setWidth] = useState<number>(Math.min(1024, window.innerWidth - 32));
+    const [height, setHeight] = useState<number>(96); // Default connected to current design approx height
+    const resizingDirection = useRef<'horizontal' | 'vertical' | null>(null);
+    const startX = useRef(0);
+    const startY = useRef(0);
+    const startWidth = useRef(0);
+    const startHeight = useRef(0);
+    const playerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleMouseMove(e: MouseEvent) {
+            if (!resizingDirection.current) return;
+
+            if (resizingDirection.current === 'horizontal') {
+                const delta = (e.clientX - startX.current) * 2;
+                const newWidth = Math.max(320, Math.min(window.innerWidth - 32, startWidth.current + delta));
+                setWidth(newWidth);
+            } else if (resizingDirection.current === 'vertical') {
+                // Dragging up (negative clientY delta) increases height
+                const delta = startY.current - e.clientY;
+                const newHeight = Math.max(96, Math.min(800, startHeight.current + delta));
+                setHeight(newHeight);
+            }
+        }
+
+        function handleMouseUp() {
+            resizingDirection.current = null;
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
+
+    const handleResizeStart = (e: React.MouseEvent, direction: 'horizontal' | 'vertical') => {
+        e.preventDefault();
+        e.stopPropagation();
+        resizingDirection.current = direction;
+
+        startX.current = e.clientX;
+        startY.current = e.clientY;
+        startWidth.current = width;
+        startHeight.current = height;
+
+        document.body.style.cursor = direction === 'horizontal' ? 'ew-resize' : 'ns-resize';
+        document.body.style.userSelect = 'none';
+    };
 
     if (!currentTrack) return null;
 
-    const coverUrl = isTrack(currentTrack) ? getTrackCoverUrl(currentTrack, 80, 80) : null;
 
     // Calculate progress percentage for the organic fill effect
     const progressPercent = duration ? (progress / duration) * 100 : 0;
@@ -65,12 +117,37 @@ export function AudioPlayer() {
               Positioned at bottom center, floating above content.
             */}
             <div
-                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[95vw] max-w-4xl transition-all duration-300 ease-out"
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
+                ref={playerRef}
+                style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100vw' }}
+                className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] transition-shadow duration-300 ease-out"
             >
                 {/* Main Card Surface */}
                 <div className="relative bg-[#161616] rounded-[24px] shadow-paper border border-[#ffffff]/5 overflow-hidden backdrop-blur-md">
+
+                    {/* Resize Handle (Right Edge) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'horizontal')}
+                        className="absolute right-0 top-0 bottom-0 w-4 cursor-ew-resize z-50 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-center group/handle"
+                        title="Drag to resize width"
+                    >
+                        <div className="w-1 h-8 rounded-full bg-white/10 group-hover/handle:bg-white/30 transition-colors" />
+                    </div>
+                    {/* Resize Handle (Left Edge) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'horizontal')}
+                        className="absolute left-0 top-0 bottom-0 w-4 cursor-ew-resize z-50 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-center group/handle"
+                    >
+                        <div className="w-1 h-8 rounded-full bg-white/10 group-hover/handle:bg-white/30 transition-colors" />
+                    </div>
+
+                    {/* Resize Handle (Top Edge) */}
+                    <div
+                        onMouseDown={(e) => handleResizeStart(e, 'vertical')}
+                        className="absolute left-4 right-4 top-0 h-4 cursor-ns-resize z-50 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-center group/handle"
+                        title="Drag to resize height"
+                    >
+                        <div className="w-8 h-1 rounded-full bg-white/10 group-hover/handle:bg-white/30 transition-colors" />
+                    </div>
 
                     {/* Background Texture Overlay */}
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
@@ -87,7 +164,7 @@ export function AudioPlayer() {
                        Internal Grid Layout 
                        Three sections: Info (Left), Controls (Center), Extra (Right)
                     */}
-                    <div className="relative flex items-center justify-between px-4 py-3 md:px-6 md:py-4 gap-4">
+                    <div className="relative flex items-center justify-between px-4 py-3 md:px-6 md:py-4 gap-4 h-full">
 
                         {/* LEFT: Track Info & Art */}
                         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -114,6 +191,14 @@ export function AudioPlayer() {
                                 </button>
 
                                 <button
+                                    onClick={toggleShuffle}
+                                    className={`transition-colors ${shuffle ? 'text-[#d4af37]' : 'text-[#999] hover:text-[#e6e6e6]'}`}
+                                    title="Shuffle"
+                                >
+                                    <Shuffle size={16} />
+                                </button>
+
+                                <button
                                     onClick={() => (isPlaying ? pause() : resume())}
                                     className="w-12 h-12 rounded-full bg-[#d4af37] text-[#0e0e0e] flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
                                 >
@@ -122,6 +207,14 @@ export function AudioPlayer() {
                                     ) : (
                                         <Play size={20} fill="currentColor" className="ml-0.5" />
                                     )}
+                                </button>
+
+                                <button
+                                    onClick={toggleRepeat}
+                                    className={`transition-colors ${repeat !== 'none' ? 'text-[#d4af37]' : 'text-[#999] hover:text-[#e6e6e6]'}`}
+                                    title="Repeat"
+                                >
+                                    {repeat === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
                                 </button>
 
                                 <button

@@ -66,12 +66,13 @@ export const favoritesService = {
      * Toggle favorite status
      * @returns New favorite status (true = favorited, false = unfavorited)
      */
-    async toggleFavorite(_userId: string, track: Track): Promise<boolean> {
+    async toggleFavorite(track: Track): Promise<boolean> {
         try {
-            const response = await manageFavorites<{ isFavorite: boolean }>({
+            const response = await manageFavorites<FavoriteResponse>({
                 action: 'toggle',
                 trackId: track.$id,
                 trackSource: track.source,
+                metadata: track // Send full metadata for ingestion
             });
 
             if (!response.success) {
@@ -127,28 +128,10 @@ export const favoritesService = {
         const tracks: Track[] = [];
 
         for (const fav of favoritesData) {
-            if (!fav) continue; // Safety check
+            if (!fav) continue;
             if (fav.track) {
-                // Appwrite track with full data
+                // Now supports inflated track for BOTH Appwrite and Jamendo
                 tracks.push(fav.track);
-            } else if (fav.track_source === 'jamendo') {
-                // Jamendo tracks need to be fetched separately
-                // Return a placeholder that can be identified and fetched
-                tracks.push({
-                    $id: fav.track_id,
-                    $createdAt: fav.$createdAt,
-                    $updatedAt: fav.$createdAt,
-                    $permissions: [],
-                    $databaseId: 'jamendo',
-                    $collectionId: 'tracks',
-                    title: 'Loading...',
-                    artist: '',
-                    album: '',
-                    duration: 0,
-                    play_count: 0,
-                    source: 'jamendo',
-                    jamendo_id: fav.track_id,
-                } as unknown as Track);
             }
         }
 

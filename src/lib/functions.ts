@@ -120,6 +120,7 @@ export interface FavoritesParams {
     trackSource?: 'jamendo' | 'appwrite';
     limit?: number;
     offset?: number;
+    metadata?: any;
 }
 
 export function manageFavorites<T>(params: FavoritesParams) {
@@ -146,6 +147,7 @@ export interface HistoryParams {
     isEpisode?: boolean;
     position?: number;
     limit?: number;
+    metadata?: any;
 }
 
 export function recordHistory<T>(params: HistoryParams) {

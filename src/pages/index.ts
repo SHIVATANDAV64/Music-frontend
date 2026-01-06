@@ -9,3 +9,4 @@ export { Playlists } from './Playlists';
 export { AdminUpload } from './AdminUpload';
 export { Profile } from './Profile';
 export { Favorites } from './Favorites';
+export { Settings } from './Settings';

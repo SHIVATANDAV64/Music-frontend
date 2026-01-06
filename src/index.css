@@ -77,12 +77,13 @@
   /* Terracotta */
 
   /* Text */
-  --text-primary: #e6e6e6;
-  /* Off-white paper */
-  --text-secondary: #999999;
-  /* Graphite */
-  --text-muted: #666666;
-  /* Faded Ink */
+  /* Text - High Contrast for Accessibility */
+  --text-primary: #ffffff;
+  /* Pure white for primary */
+  --text-secondary: #d4d4d4;
+  /* Light gray for secondary (was #999) */
+  --text-muted: #a3a3a3;
+  /* Lighter gray for muted (was #666) */
 
   /* ─────────────────────────────────────────────────────────────────────────
      SHADOWS & DEPTH - Tactile
@@ -156,20 +157,20 @@
 @media (max-width: 768px) {
   .main-content {
     margin-left: 0;
-    padding-top: calc(64px + var(--space-13));
+    padding-top: calc(64px + var(--space-21));
     padding-left: var(--space-13);
     padding-right: var(--space-13);
-    padding-bottom: 280px;
-    /* More space on mobile due to full-width player */
+    padding-bottom: 180px;
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
   .main-content {
-    padding-top: calc(64px + var(--space-8));
+    padding-top: calc(56px + var(--space-13));
     padding-left: var(--space-8);
     padding-right: var(--space-8);
-    padding-bottom: 300px;
+    padding-bottom: 220px;
   }
 }
 
@@ -298,11 +299,19 @@
 
 /* Glass effect - subtle, for overlays */
 .glass {
-  background: rgba(10, 10, 10, 0.8);
+  background: rgba(22, 22, 22, 0.7);
   -webkit-backdrop-filter: blur(16px);
   -moz-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-dark {
+  background: rgba(10, 10, 10, 0.85);
+  -webkit-backdrop-filter: blur(20px);
+  -moz-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Skeleton loading */

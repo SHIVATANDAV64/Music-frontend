@@ -140,6 +140,19 @@ export function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
                                     </p>
                                 </div>
 
+                                {/* Remove button (Desktop) */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        // TODO: Implement remove from queue
+                                        console.log('Remove from queue clicked');
+                                    }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-red-500 hover:bg-white/10 transition-all"
+                                    title="Remove from queue"
+                                >
+                                    <X size={14} />
+                                </button>
+
                                 {/* Play on hover */}
                                 <button className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 bg-[var(--gold)] text-black transition-opacity">
                                     <Play size={14} fill="currentColor" />

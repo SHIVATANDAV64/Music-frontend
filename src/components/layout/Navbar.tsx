@@ -40,19 +40,19 @@ export function Navbar() {
     }
 
     return (
-        <header 
-            className="fixed top-0 right-0 h-16 glass-dark z-30 flex items-center justify-between px-6"
-            style={{ left: 'var(--sidebar-width)' }}
+        <header
+            className="fixed top-0 right-0 h-16 glass-dark z-30 flex items-center justify-between px-6 transition-all duration-300"
+            style={{ left: 'var(--sidebar-width, 280px)' }}
         >
-            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="relative w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+            {/* Search Bar - improved visibility */}
+            <form onSubmit={handleSearch} className="relative w-full max-w-md hidden md:block">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                 <input
                     type="text"
                     placeholder="Search tracks, podcasts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-full bg-white/5 text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+                    className="w-full pl-12 pr-4 py-2.5 rounded-full bg-white/15 text-white placeholder:text-white/40 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/60 focus:bg-white/20 transition-all duration-300"
                 />
             </form>
 
@@ -62,17 +62,17 @@ export function Navbar() {
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setShowDropdown(!showDropdown)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-full glass hover:bg-white/10 transition-colors"
+                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 active:scale-95"
                         >
-                            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full bg-[var(--gold)]/20 flex items-center justify-center border border-[var(--gold)]/30">
                                 {user?.avatar_url ? (
                                     <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                                 ) : (
-                                    <User size={18} className="text-accent" />
+                                    <User size={18} className="text-[var(--gold)]" />
                                 )}
                             </div>
-                            <span className="text-sm font-medium">{user?.username}</span>
-                            <ChevronDown size={16} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                            <span className="text-sm font-semibold text-white/90 hidden sm:inline-block">{user?.username}</span>
+                            <ChevronDown size={14} className={`text-white/50 transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
                         </button>
 
                         <AnimatePresence>
