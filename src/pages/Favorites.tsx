@@ -1,13 +1,12 @@
 /**
- * Favorites Page - Sacred Collection
+ * Favorites Page - Sacred Archive
  * 
- * Philosophy: These are the sounds that moved the user's soul.
- * Display them with reverence, like a personal gallery.
+ * Philosophy: A secured vault of high-value audio data.
+ * Aesthetic: Deep void, gold accents, precision grid.
  */
 import { useState, useEffect } from 'react';
-import { Heart, Music } from 'lucide-react';
+import { Heart, Database } from 'lucide-react';
 import { MusicCard } from '../components/cards';
-import { AmbientGlow } from '../components/ui';
 import { favoritesService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -49,60 +48,66 @@ export function Favorites() {
 
     if (authLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-[#c9a962] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-[var(--color-void)]">
+                <div className="font-mono text-xs text-[var(--color-accent-gold)] animate-pulse">AUTHENTICATING_ACCESS...</div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen relative">
-            <AmbientGlow isActive={true} intensity={0.15} />
-
-            <div className="max-w-7xl mx-auto px-8 py-16">
+        <div className="min-h-screen p-8 relative">
+            <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="mb-16">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a962] to-[#8b6914] flex items-center justify-center">
-                            <Heart size={28} fill="white" className="text-white" />
+                <div className="flex items-end justify-between border-b border-[var(--color-border)] pb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5 flex items-center justify-center relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-[var(--color-accent-gold)]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                            <Heart size={32} className="text-[var(--color-accent-gold)] relative z-10" />
+
+                            {/* Tech cosmetic corners */}
+                            <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-[var(--color-accent-gold)]" />
+                            <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-[var(--color-accent-gold)]" />
                         </div>
                         <div>
-                            <p className="text-[#4a5e4a] text-xs uppercase tracking-widest mb-1">
-                                Your Collection
-                            </p>
-                            <h1 className="text-4xl md:text-5xl font-serif text-[#fafaf5]">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-mono text-[var(--color-accent-gold)] uppercase tracking-widest">
+                                    // SECURE_VAULT
+                                </span>
+                                <div className="h-px flex-1 w-12 bg-[var(--color-accent-gold)]/30" />
+                            </div>
+                            <h1 className="text-4xl font-display font-bold text-[var(--color-text-primary)] uppercase tracking-widest leading-none">
                                 Favorites
                             </h1>
+                            <p className="font-mono text-xs text-[var(--color-text-muted)] mt-2 uppercase tracking-wider">
+                                COLLECTION_SIZE: <span className="text-[var(--color-text-primary)]">{favorites.length} UNITS</span>
+                            </p>
                         </div>
                     </div>
-                    <p className="text-[#fafaf5]/50 max-w-xl">
-                        The sounds that moved your soul, gathered in one sacred place.
-                    </p>
                 </div>
 
                 {/* Content */}
                 {isLoading ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {Array.from({ length: 8 }).map((_, i) => (
-                            <div key={i} className="p-5 rounded-2xl bg-[#111111]">
-                                <div className="aspect-square rounded-xl bg-[#1a1a1a] animate-pulse mb-4" />
-                                <div className="h-4 rounded bg-[#1a1a1a] animate-pulse w-3/4 mb-2" />
-                                <div className="h-3 rounded bg-[#1a1a1a] animate-pulse w-1/2" />
+                            <div key={i} className="aspect-[3/4] border border-[var(--color-border)] bg-[var(--color-card)] flex flex-col p-4 gap-4 animate-pulse">
+                                <div className="aspect-square bg-[var(--color-void)] w-full" />
+                                <div className="h-4 bg-[var(--color-void)] w-3/4" />
+                                <div className="h-3 bg-[var(--color-void)] w-1/2" />
                             </div>
                         ))}
                     </div>
                 ) : favorites.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24">
-                        <div className="w-24 h-24 rounded-full bg-[#111111] flex items-center justify-center mb-6">
-                            <Music size={40} className="text-[#fafaf5]/20" />
+                    <div className="flex flex-col items-center justify-center py-32 border border-dashed border-[var(--color-border)] bg-[var(--color-card)]">
+                        <div className="p-6 border border-[var(--color-border)] rounded-full mb-6 bg-[var(--color-void)]">
+                            <Database size={40} className="text-[var(--color-text-muted)]" />
                         </div>
-                        <h3 className="text-xl font-serif text-[#fafaf5] mb-2">
-                            No favorites yet
+                        <h3 className="text-xl font-display text-[var(--color-text-primary)] mb-2 uppercase tracking-widest">
+                            Vault Empty
                         </h3>
-                        <p className="text-[#fafaf5]/50 text-center max-w-md">
-                            As you discover music that moves you, save it here.
+                        <p className="font-mono text-xs text-[var(--color-text-muted)] text-center max-w-md uppercase">
+                            No audio objects detected in secure storage.
                             <br />
-                            Each track you love becomes part of your collection.
+                            Initiate archival protocol on preferred frequencies.
                         </p>
                     </div>
                 ) : (

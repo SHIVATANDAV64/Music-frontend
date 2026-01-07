@@ -1,29 +1,34 @@
 /**
- * Sidebar - Organic Design with Collapse
+ * Sidebar - Audio Architecture
  * 
- * Philosophy: Space is silence. Generous whitespace lets music breathe.
- * Uses Fibonacci spacing: 8, 13, 21, 34, 55
- * Width follows sacred proportion for overall layout harmony.
+ * Philosophy: Technical, Precision, Database Access.
+ * Replaces organic curves with sharp edges and blueprint styling.
  */
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Home, Search, Library, Plus,
     Heart, Music, Disc3, Upload,
-    PanelLeftClose, PanelLeftOpen, History
+    PanelLeftOpen, History,
+    Settings, Database, Radio
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const SIDEBAR_COLLAPSED_KEY = 'soundwave_sidebar_collapsed';
+const SIDEBAR_COLLAPSED_KEY = 'audio_os_sidebar_collapsed';
 
-export function Sidebar() {
+interface SidebarProps {
+    mobileOpen?: boolean;
+    onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     const { user, isAuthenticated } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(() => {
         const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
         return saved === 'true';
     });
 
-    // Persist collapse state
+    // Persist collapse state (Desktop only)
     useEffect(() => {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isCollapsed));
         // Update CSS variable for layout
@@ -33,148 +38,262 @@ export function Sidebar() {
         );
     }, [isCollapsed]);
 
-    return (
-        <aside
-            className={`fixed left-0 top-0 h-full bg-[#080808] border-r border-white/5 flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-[280px]'
-                }`}
-        >
-            {/* Logo - Fibonacci spacing: 34px padding */}
-            <div className={`p-[21px] ${isCollapsed ? 'flex justify-center' : ''}`}>
-                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-[13px]'}`}>
-                    <div className="w-[45px] h-[45px] rounded-[13px] bg-[var(--gold)] flex items-center justify-center shadow-lg flex-shrink-0">
-                        <Disc3 size={20} className="text-[var(--bg-deep)]" />
+    // Handle Mobile Overlay Body Scroll Lock
+    useEffect(() => {
+        if (mobileOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [mobileOpen]);
+
+    const sidebarContent = (
+        <>
+            {/* Header - Technical Branding */}
+            <div className={`h-20 flex items-center ${isCollapsed ? 'justify-center' : 'px-6'} border-b border-[var(--color-border)] bg-[var(--color-void)]`}>
+                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-4'} w-full`}>
+                    <div className="w-10 h-10 bg-[var(--color-accent-gold)]/10 border border-[var(--color-accent-gold)] flex items-center justify-center relative group shrink-0">
+                        <div className="absolute inset-0 bg-[var(--color-accent-gold)] opacity-0 group-hover:opacity-20 transition-opacity" />
+                        <Disc3 size={20} className="text-[var(--color-accent-gold)] animate-spin-slow" />
+
+                        {/* Corner Accents */}
+                        <div className="absolute top-0 left-0 w-1 h-1 bg-[var(--color-accent-gold)]" />
+                        <div className="absolute bottom-0 right-0 w-1 h-1 bg-[var(--color-accent-gold)]" />
                     </div>
-                    {!isCollapsed && (
-                        <div>
-                            <span className="text-lg font-bold font-serif text-[var(--text-primary)]">
-                                SoundWave
+
+                    {(!isCollapsed || mobileOpen) && (
+                        <div className="flex-1 min-w-0">
+                            <span className="block font-display text-lg text-[var(--color-text-primary)] tracking-widest leading-none truncate">
+                                AUDIO_OS
                             </span>
-                            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">
-                                Premium
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="w-1.5 h-1.5 bg-[var(--color-accent-gold)] rounded-full animate-pulse" />
+                                <p className="font-mono text-[9px] text-[var(--color-text-muted)] uppercase tracking-[0.2em]">
+                                    System Online
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Navigation - Fibonacci: 21px horizontal, 8px vertical */}
-            <nav className={`flex-1 ${isCollapsed ? 'px-3' : 'px-[21px]'} space-y-[8px] overflow-y-auto`}>
-                <NavItem to="/home" icon={Home} label="Home" collapsed={isCollapsed} />
-                <NavItem to="/search" icon={Search} label="Discover" collapsed={isCollapsed} />
-                <NavItem to="/music" icon={Music} label="Library" collapsed={isCollapsed} />
+            {/* Navigation Channels */}
+            <nav className="flex-1 overflow-y-auto py-6 space-y-8 scrollbar-hide">
+                {/* Main Modules */}
+                <div className="px-4">
+                    {(!isCollapsed || mobileOpen) && (
+                        <div className="px-2 mb-3 flex items-center gap-2">
+                            <div className="w-1 h-1 bg-[#D4AF37]" />
+                            <span className="font-mono text-[10px] text-white/30 uppercase tracking-widest">Modules</span>
+                            <div className="h-[1px] flex-1 bg-white/5" />
+                        </div>
+                    )}
+                    <div className="space-y-1">
+                        <NavItem to="/home" icon={Home} label="Dashboard" collapsed={isCollapsed && !mobileOpen} code="01" onClick={onMobileClose} />
+                        <NavItem to="/search" icon={Search} label="Search" collapsed={isCollapsed && !mobileOpen} code="02" onClick={onMobileClose} />
+                        <NavItem to="/music" icon={Music} label="Library" collapsed={isCollapsed && !mobileOpen} code="03" onClick={onMobileClose} />
+                        <NavItem to="/podcasts" icon={Radio} label="Podcasts" collapsed={isCollapsed && !mobileOpen} code="04" onClick={onMobileClose} />
+                    </div>
+                </div>
 
-                {/* User Collection - Fibonacci padding: 34px top */}
+                {/* User Data */}
                 {isAuthenticated && (
-                    <div className="pt-[34px]">
-                        {!isCollapsed && (
-                            <div className="flex items-center justify-between px-[13px] mb-[13px]">
-                                <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">
-                                    Collection
-                                </span>
-                                <button className="w-[21px] h-[21px] rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--gold)] transition-colors">
-                                    <Plus size={13} />
+                    <div className="px-4">
+                        {(!isCollapsed || mobileOpen) && (
+                            <div className="px-2 mb-3 flex items-center gap-2">
+                                <div className="w-1 h-1 bg-[#D4AF37]" />
+                                <span className="font-mono text-[10px] text-white/30 uppercase tracking-widest">Collections</span>
+                                <div className="h-[1px] flex-1 bg-white/5" />
+                                <button className="text-white/30 hover:text-[#D4AF37] transition-colors">
+                                    <Plus size={12} />
                                 </button>
                             </div>
                         )}
-                        <NavItem to="/playlists" icon={Library} label="Playlists" collapsed={isCollapsed} />
-                        <NavItem to="/favorites" icon={Heart} label="Favorites" collapsed={isCollapsed} />
-                        <NavItem to="/history" icon={History} label="History" collapsed={isCollapsed} />
+                        <div className="space-y-1">
+                            <NavItem to="/playlists" icon={Library} label="Playlists" collapsed={isCollapsed && !mobileOpen} code="A" onClick={onMobileClose} />
+                            <NavItem to="/favorites" icon={Heart} label="Favorites" collapsed={isCollapsed && !mobileOpen} code="B" onClick={onMobileClose} />
+                            <NavItem to="/history" icon={History} label="History" collapsed={isCollapsed && !mobileOpen} code="C" onClick={onMobileClose} />
+                        </div>
                     </div>
                 )}
 
-                {/* Admin */}
+                {/* System / Admin */}
                 {user?.is_admin && (
-                    <div className="pt-[34px]">
-                        {!isCollapsed && (
-                            <div className="px-[13px] mb-[13px]">
-                                <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">
-                                    Admin
-                                </span>
+                    <div className="px-4">
+                        {(!isCollapsed || mobileOpen) && (
+                            <div className="px-2 mb-3 flex items-center gap-2">
+                                <div className="w-1 h-1 bg-red-500/50" />
+                                <span className="font-mono text-[10px] text-red-500/50 uppercase tracking-widest">Restricted</span>
+                                <div className="h-[1px] flex-1 bg-red-500/10" />
                             </div>
                         )}
-                        <NavItem to="/admin" icon={Upload} label="Upload" collapsed={isCollapsed} />
+                        <div className="space-y-1">
+                            <NavItem to="/admin" icon={Upload} label="Ingest Data" collapsed={isCollapsed && !mobileOpen} code="ROOT" variant="danger" onClick={onMobileClose} />
+                        </div>
                     </div>
                 )}
             </nav>
 
-            {/* Collapse Toggle */}
-            <div className={`p-4 ${isCollapsed ? 'flex justify-center' : ''}`}>
-                <button
-                    onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--gold)] hover:bg-white/5 transition-all"
-                    title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                >
-                    {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-                </button>
-            </div>
-
-            {/* User - Fibonacci: 21px padding */}
-            <div className={`p-[21px] border-t border-white/5 ${isCollapsed ? 'flex justify-center' : ''}`}>
+            {/* Footer Control */}
+            <div
+                className="p-4 border-t"
+                style={{
+                    borderTopColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-void)'
+                }}
+            >
+                {/* User Identity */}
                 {isAuthenticated ? (
-                    <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-[13px] p-[13px] rounded-[13px] bg-[var(--bg-card)]'}`}>
-                        <div className="w-[34px] h-[34px] rounded-full bg-[var(--gold)] flex items-center justify-center text-[var(--bg-deep)] font-bold text-sm flex-shrink-0">
-                            {user?.username?.[0]?.toUpperCase() || 'U'}
+                    <div className={`
+                        relative group flex items-center ${(isCollapsed && !mobileOpen) ? 'justify-center' : 'gap-3 p-3'} 
+                        ${(!isCollapsed || mobileOpen) && 'border hover:border-[#D4AF37]/30 transition-colors'}
+                    `}
+                        style={{
+                            borderColor: (!isCollapsed || mobileOpen) ? 'var(--color-border)' : 'transparent',
+                            backgroundColor: (!isCollapsed || mobileOpen) ? 'var(--color-card)' : 'transparent'
+                        }}
+                    >
+                        {/* Profile Pic / Avatar */}
+                        <div className="relative w-8 h-8 flex items-center justify-center bg-[#D4AF37]/10 border border-[#D4AF37]/30 shrink-0">
+                            <span className="font-mono text-xs text-[#D4AF37]">
+                                {user?.username?.[0]?.toUpperCase() || 'U'}
+                            </span>
+                            {/* Tech Corners */}
+                            <div className="absolute -top-px -left-px w-1.5 h-1.5 border-l border-t border-[#D4AF37]" />
+                            <div className="absolute -bottom-px -right-px w-1.5 h-1.5 border-r border-b border-[#D4AF37]" />
                         </div>
-                        {!isCollapsed && (
+
+                        {(!isCollapsed || mobileOpen) && (
                             <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm truncate">{user?.username}</p>
-                                <p className="text-[10px] text-[var(--sage)]">Premium</p>
+                                <p className="font-mono text-xs truncate" style={{ color: 'var(--color-text-primary)' }}>
+                                    {user?.username}
+                                </p>
+                                <p className="font-mono text-[9px] text-[#D4AF37] uppercase tracking-wider">
+                                    ID: {user?.$id?.substring(0, 6) || 'UNKNOWN'}
+                                </p>
                             </div>
+                        )}
+
+                        {(!isCollapsed || mobileOpen) && (
+                            <NavLink to="/settings" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={onMobileClose}>
+                                <Settings size={14} className="text-white/40 hover:text-white" />
+                            </NavLink>
                         )}
                     </div>
                 ) : (
-                    <NavLink to="/login" className="block">
-                        <button className={`py-[13px] rounded-full bg-[var(--gold)] text-[var(--bg-deep)] font-semibold text-sm uppercase tracking-wider transition-all hover:bg-[var(--gold-light)] ${isCollapsed ? 'w-10 h-10 p-0 flex items-center justify-center' : 'w-full px-[21px]'
-                            }`}>
-                            {isCollapsed ? '→' : 'Sign In'}
+                    <NavLink to="/login" className="block" onClick={onMobileClose}>
+                        <button className={`
+                            w-full py-3 flex items-center justify-center gap-2
+                            border border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]
+                            hover:bg-[#D4AF37] hover:text-black transition-all duration-300
+                            font-mono text-xs uppercase tracking-widest
+                        `}>
+                            {(isCollapsed && !mobileOpen) ? <Database size={16} /> : 'AUTHENTICATE'}
                         </button>
                     </NavLink>
                 )}
+
+                {/* Collapser - Desktop Only */}
+                {!mobileOpen && (
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="w-full mt-4 flex items-center justify-center p-2 text-white/20 hover:text-[#D4AF37] transition-colors"
+                    >
+                        {isCollapsed ? <PanelLeftOpen size={16} /> : <div className="h-1 w-8 bg-white/10 hover:bg-[#D4AF37] transition-colors rounded-full" />}
+                    </button>
+                )}
             </div>
-        </aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* Desktop Sidebar */}
+            <aside
+                className={`hidden md:flex fixed left-0 top-0 h-full bg-[var(--color-void)] border-r border-[var(--color-border)] flex-col transition-all duration-300 z-50 ${isCollapsed ? 'w-20' : 'w-[280px]'}`}
+            >
+                {sidebarContent}
+            </aside>
+
+            {/* Mobile Sidebar Overlay */}
+            <div className={`md:hidden fixed inset-0 z-50 transition-all duration-300 ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+                {/* Backdrop */}
+                <div
+                    className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 ${mobileOpen ? 'opacity-100' : 'opacity-0'}`}
+                    onClick={onMobileClose}
+                />
+
+                {/* Drawer */}
+                <aside
+                    className={`absolute left-0 top-0 bottom-0 w-[280px] bg-[var(--color-void)] border-r border-[var(--color-border)] flex flex-col transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                >
+                    {sidebarContent}
+                </aside>
+            </div>
+        </>
     );
 }
 
 /**
- * NavItem - Purposeful navigation
- * Gold accent only on active/hover = "this is interactive"
+ * NavItem - Terminal Tab Style
  */
 function NavItem({
     to,
     icon: Icon,
     label,
     collapsed = false,
+    code,
+    variant = 'default',
+    onClick
 }: {
     to: string;
-    icon: typeof Home;
+    icon: any;
     label: string;
     collapsed?: boolean;
+    code?: string;
+    variant?: 'default' | 'danger';
+    onClick?: () => void;
 }) {
+    const activeColor = variant === 'danger' ? 'text-red-500' : 'text-[var(--color-accent-gold)]';
+    const activeBorder = variant === 'danger' ? 'border-red-500' : 'border-[var(--color-accent-gold)]';
+    const activeBg = variant === 'danger' ? 'bg-red-500/10' : 'bg-[var(--color-accent-gold)]/10';
+
     return (
         <NavLink
             to={to}
+            onClick={onClick}
             className={({ isActive }) => `
-                group flex items-center ${collapsed ? 'justify-center' : 'gap-[13px]'} px-[13px] py-[13px] rounded-[13px] transition-all duration-200
+                group relative flex items-center ${collapsed ? 'justify-center h-12 w-12 mx-auto' : 'h-10 px-3 mx-2'} 
+                transition-all duration-200 border border-transparent
                 ${isActive
-                    ? 'bg-[var(--gold-muted)] text-[var(--gold)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/5'}
+                    ? `${activeBg} ${activeBorder} ${activeColor}`
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border)] hover:bg-[var(--color-card)]'}
             `}
             title={collapsed ? label : undefined}
         >
             {({ isActive }) => (
                 <>
-                    <Icon
-                        size={21}
-                        className={isActive ? 'text-[var(--gold)]' : ''}
-                        strokeWidth={isActive ? 2.5 : 2}
-                    />
-                    {!collapsed && (
-                        <span className="font-medium text-sm">{label}</span>
+                    {/* Active Indicator Line (Left) */}
+                    {isActive && !collapsed && (
+                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${variant === 'danger' ? 'bg-red-500' : 'bg-[var(--color-accent-gold)]'}`} />
                     )}
 
-                    {/* Active indicator - sage accent for variety */}
-                    {isActive && !collapsed && (
-                        <div className="ml-auto w-[5px] h-[5px] rounded-full bg-[var(--sage)]" />
+                    <Icon
+                        size={18}
+                        className={isActive ? (variant === 'danger' ? 'text-red-500' : 'text-[var(--color-accent-gold)]') : 'group-hover:text-[var(--color-text-primary)] transition-colors'}
+                        strokeWidth={1.5}
+                    />
+
+                    {!collapsed && (
+                        <div className="ml-3 flex-1 flex items-center justify-between">
+                            <span className="font-mono text-xs uppercase tracking-wider">{label}</span>
+                            {code && (
+                                <span className={`font-mono text-[9px] ${isActive ? 'opacity-100' : 'opacity-20'}`}>
+                                    {code}
+                                </span>
+                            )}
+                        </div>
                     )}
                 </>
             )}

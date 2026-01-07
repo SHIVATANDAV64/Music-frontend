@@ -1,15 +1,17 @@
 /**
- * Navbar Component
- * Top navigation bar with search and user menu
+ * Navbar - Observation Deck
+ * 
+ * Philosophy: Top-level controls for the audio system.
+ * Minimalist, always accessible, floating above the chaos.
  */
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, LogOut, ChevronDown } from 'lucide-react';
+import { Search, User, LogOut, ChevronDown, Command, Menu } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function Navbar() {
+export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
     const { user, isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
     const [showDropdown, setShowDropdown] = useState(false);
@@ -41,74 +43,108 @@ export function Navbar() {
 
     return (
         <header
-            className="fixed top-0 right-0 h-16 glass-dark z-30 flex items-center justify-between px-6 transition-all duration-300"
-            style={{ left: 'var(--sidebar-width, 280px)' }}
+            className="fixed top-0 right-0 left-0 md:left-[var(--sidebar-width,280px)] h-16 md:h-20 flex items-center justify-between px-4 md:px-8 transition-all duration-300 z-40 bg-[var(--color-void)]/80 backdrop-blur-md border-b border-[var(--color-border)]"
         >
-            {/* Search Bar - improved visibility */}
-            <form onSubmit={handleSearch} className="relative w-full max-w-md hidden md:block">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+            {/* Mobile Menu Toggle */}
+            <button
+                onClick={onMenuClick}
+                className="md:hidden p-2 -ml-2 text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] transition-colors"
+            >
+                <Menu size={24} strokeWidth={1.5} />
+            </button>
+
+            {/* Search Module - Technical Input */}
+            <form onSubmit={handleSearch} className="relative w-full max-w-lg hidden md:block group ml-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors" size={16} />
                 <input
                     type="text"
-                    placeholder="Search tracks, podcasts..."
+                    placeholder="Search database..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-2.5 rounded-full bg-secondary text-primary placeholder:text-muted border border-theme focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/60 focus:bg-hover transition-all duration-300"
+                    className="w-full pl-12 pr-12 py-3 bg-[var(--color-card)] border border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] font-mono text-sm focus:outline-none focus:border-[var(--color-accent-gold)] focus:bg-[var(--color-card-hover)] transition-all duration-300"
                 />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                    <Command size={12} className="text-[var(--color-text-muted)]" />
+                    <span className="font-mono text-[10px] text-[var(--color-text-muted)]">K</span>
+                </div>
             </form>
 
-            {/* User Menu */}
-            <div className="flex items-center gap-4">
+            {/* User Control Module */}
+            <div className="flex items-center gap-6">
                 {isAuthenticated ? (
                     <div className="relative" ref={dropdownRef}>
                         <button
                             onClick={() => setShowDropdown(!showDropdown)}
-                            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-secondary border border-theme hover:bg-hover transition-all duration-300 active:scale-95"
+                            className={`
+                                flex items-center gap-3 pl-1 pr-4 py-1 border transition-all duration-300
+                                ${showDropdown ? 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/10' : 'border-transparent hover:border-[var(--color-border)]'}
+                            `}
                         >
-                            <div className="w-8 h-8 rounded-full bg-[var(--gold)]/20 flex items-center justify-center border border-[var(--gold)]/30">
+                            <div className="w-8 h-8 flex items-center justify-center bg-[var(--color-card)] border border-[var(--color-border)]">
                                 {user?.avatar_url ? (
-                                    <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all" />
                                 ) : (
-                                    <User size={18} className="text-[var(--gold)]" />
+                                    <User size={14} className="text-[var(--color-text-muted)]" />
                                 )}
                             </div>
-                            <span className="text-sm font-semibold text-primary hidden sm:inline-block">{user?.username}</span>
-                            <ChevronDown size={14} className={`text-secondary transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`} />
+                            <div className="hidden sm:flex flex-col items-start">
+                                <span className="font-mono text-[10px] text-[var(--color-accent-gold)] uppercase tracking-wider leading-none mb-1">Operator</span>
+                                <span className="font-display text-sm text-[var(--color-text-primary)] leading-none">{user?.username}</span>
+                            </div>
+                            <ChevronDown size={12} className={`text-[var(--color-text-muted)] transition-transform duration-300 ${showDropdown ? 'rotate-180 text-[var(--color-accent-gold)]' : ''}`} />
                         </button>
 
                         <AnimatePresence>
                             {showDropdown && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
+                                    initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 10 }}
-                                    className="absolute right-0 top-full mt-2 w-48 bg-paper border border-theme rounded-lg overflow-hidden shadow-xl z-50"
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="absolute right-0 top-full mt-2 w-56 bg-[var(--color-card)] border border-[var(--color-border)] shadow-2xl z-50"
                                 >
-                                    <Link
-                                        to="/profile"
-                                        className="flex items-center gap-2 px-4 py-3 text-sm text-primary hover:bg-hover transition-colors"
-                                        onClick={() => setShowDropdown(false)}
-                                    >
-                                        <User size={16} />
-                                        Profile
-                                    </Link>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-error hover:bg-hover transition-colors text-left"
-                                    >
-                                        <LogOut size={16} />
-                                        Logout
-                                    </button>
+                                    {/* Dropdown Header */}
+                                    <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-card)]">
+                                        <p className="font-mono text-[9px] text-[var(--color-text-muted)] uppercase tracking-widest mb-1">Signed in as</p>
+                                        <p className="font-display text-sm text-[var(--color-text-primary)] truncate">{user?.email}</p>
+                                    </div>
+
+                                    {/* Menu Items */}
+                                    <div className="p-1">
+                                        <Link
+                                            to="/profile"
+                                            className="flex items-center gap-3 px-4 py-3 text-sm font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-card-hover)] transition-colors group"
+                                            onClick={() => setShowDropdown(false)}
+                                        >
+                                            <User size={14} className="group-hover:text-[var(--color-accent-gold)] transition-colors" />
+                                            PROFILE_DATA
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-mono text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-card-hover)] transition-colors group text-left"
+                                        >
+                                            <LogOut size={14} className="group-hover:text-red-500 transition-colors" />
+                                            TERMINATE_SESSION
+                                        </button>
+                                    </div>
+
+                                    {/* Dropdown Footer - Decorative */}
+                                    <div className="h-1 w-full bg-[var(--color-accent-gold)]/20 flex">
+                                        <div className="w-1/3 h-full bg-[var(--color-accent-gold)]" />
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <Link to="/login">
-                            <Button variant="ghost">Log in</Button>
+                            <span className="font-mono text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors uppercase tracking-wider">Log in</span>
                         </Link>
                         <Link to="/register">
-                            <Button variant="primary">Sign up</Button>
+                            <Button variant="outline" className="border-[var(--color-accent-gold)] text-[var(--color-accent-gold)] hover:bg-[var(--color-accent-gold)] hover:text-black">
+                                INITIALIZE
+                            </Button>
                         </Link>
                     </div>
                 )}

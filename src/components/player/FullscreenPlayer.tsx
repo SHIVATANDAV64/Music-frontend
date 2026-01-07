@@ -188,7 +188,7 @@ export function FullscreenPlayer({
     if (!isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col animate-in fade-in duration-500 bg-black overflow-hidden font-sans">
+        <div className="fixed inset-0 z-[200] flex flex-col animate-in fade-in duration-500 bg-[var(--color-void)] overflow-hidden font-sans">
 
             {/* 1. LAYER: VISUALIZER (The Hero) - Always visible, never hidden */}
             <div className="absolute inset-0 z-0">
@@ -196,13 +196,13 @@ export function FullscreenPlayer({
                     <CymaticsVisualizer mode={visualizerMode} />
                 </div>
                 {/* Subtle vignette */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--color-void)_100%)] opacity-60" />
             </div>
 
             {/* 2. LAYER: TOP BAR (Header) - Always visible Eye button */}
             <div className="relative z-50 w-full p-6 md:p-8 flex justify-between items-start">
                 {/* Visualizer Toggle - persistent but subtle when UI hidden */}
-                <div className={`backdrop-blur-md bg-black/20 rounded-full p-1 border border-white/10 transition-all duration-700 ${showUI ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}>
+                <div className={`backdrop-blur-md bg-[var(--color-card)]/20 rounded-full p-1 border border-[var(--color-border)] transition-all duration-700 ${showUI ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}>
                     <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
                 </div>
 
@@ -213,10 +213,10 @@ export function FullscreenPlayer({
                             e.stopPropagation();
                             setShowUI(!showUI);
                         }}
-                        className="group flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors"
+                        className="group flex flex-col items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={showUI ? 'Hide UI' : 'Show UI'}
                     >
-                        <div className="w-12 h-12 rounded-full backdrop-blur-md bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-all">
+                        <div className="w-12 h-12 rounded-full backdrop-blur-md bg-[var(--color-card)]/5 border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[var(--color-card)]/10 transition-all">
                             {showUI ? <EyeOff size={20} /> : <Eye size={20} />}
                         </div>
                     </button>
@@ -224,9 +224,9 @@ export function FullscreenPlayer({
                     {/* Close Button - conditionally visible */}
                     <button
                         onClick={onClose}
-                        className={`group flex flex-col items-center gap-1 text-white/50 hover:text-white transition-all duration-500 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                        className={`group flex flex-col items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-all duration-500 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     >
-                        <div className="w-12 h-12 rounded-full backdrop-blur-md bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-all">
+                        <div className="w-12 h-12 rounded-full backdrop-blur-md bg-[var(--color-card)]/5 border border-[var(--color-border)] flex items-center justify-center group-hover:bg-[var(--color-card)]/10 transition-all">
                             <Minimize2 size={20} />
                         </div>
                     </button>
@@ -276,8 +276,14 @@ export function FullscreenPlayer({
                 <div
                     ref={dockRef}
                     style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100vw' }}
-                    className="relative backdrop-blur-xl bg-black/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl ring-1 ring-white/5 flex flex-col justify-center"
+                    className="relative backdrop-blur-xl bg-[var(--color-card)]/60 border border-[var(--color-border)] rounded-lg p-6 md:p-8 shadow-2xl ring-1 ring-[var(--color-border)] flex flex-col justify-center overflow-hidden"
                 >
+                    {/* Tech Decorators */}
+                    <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-[var(--color-accent-gold)]/50 rounded-tl-lg" />
+                    <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-[var(--color-accent-gold)]/50 rounded-tr-lg" />
+                    <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[var(--color-accent-gold)]/50 rounded-bl-lg" />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[var(--color-accent-gold)]/50 rounded-br-lg" />
+
                     {/* Resize Handles */}
                     {/* Vertical (Top) */}
                     <div
@@ -285,7 +291,7 @@ export function FullscreenPlayer({
                         className="absolute left-10 right-10 -top-1 h-3 cursor-ns-resize z-50 flex items-center justify-center group/handle transition-opacity"
                         title="Drag to resize height"
                     >
-                        <div className="w-16 h-1 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                        <div className="w-16 h-1 rounded-full bg-[var(--color-text-muted)]/20 group-hover/handle:bg-[var(--color-accent-gold)] shadow-lg" />
                     </div>
 
                     {/* Horizontal (Right) */}
@@ -294,7 +300,7 @@ export function FullscreenPlayer({
                         className="absolute -right-1 top-10 bottom-10 w-3 cursor-ew-resize z-50 flex items-center justify-center group/handle transition-opacity"
                         title="Drag to resize width"
                     >
-                        <div className="w-1 h-12 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                        <div className="w-1 h-12 rounded-full bg-[var(--color-text-muted)]/20 group-hover/handle:bg-[var(--color-accent-gold)] shadow-lg" />
                     </div>
 
                     {/* Horizontal (Left) */}
@@ -302,7 +308,7 @@ export function FullscreenPlayer({
                         onMouseDown={(e) => handleResizeStart(e, 'left')}
                         className="absolute -left-1 top-10 bottom-10 w-3 cursor-ew-resize z-50 flex items-center justify-center group/handle transition-opacity"
                     >
-                        <div className="w-1 h-12 rounded-full bg-white/20 group-hover/handle:bg-[#d4af37] shadow-lg" />
+                        <div className="w-1 h-12 rounded-full bg-[var(--color-text-muted)]/20 group-hover/handle:bg-[var(--color-accent-gold)] shadow-lg" />
                     </div>
 
                     {/* 
@@ -312,88 +318,88 @@ export function FullscreenPlayer({
                     */}
 
                     {/* Row 1: Main Controls Row */}
-                    <div className="flex items-center justify-between w-full mb-4">
+                    <div className="flex items-center justify-between w-full mb-6">
 
                         {/* LEFT: Track Info */}
                         <div className="flex flex-col min-w-0 flex-1">
-                            <h4 className="text-white/90 text-sm md:text-base font-medium truncate tracking-wide">
-                                {trackName || 'Unknown Track'}
+                            <h4 className="text-[var(--color-text-primary)] text-sm md:text-base font-display tracking-widest uppercase truncate border-l-2 border-[var(--color-accent-gold)] pl-3">
+                                {trackName || 'NO_SIGNAL'}
                             </h4>
-                            <p className="text-[#d4af37]/80 text-xs md:text-sm truncate italic">
-                                {artistName || 'Unknown Artist'}
+                            <p className="text-[var(--color-text-muted)] text-xs md:text-sm truncate font-mono uppercase pl-3 mt-1">
+                                {artistName || 'UNKNOWN_UNIT'}
                             </p>
                         </div>
 
                         {/* CENTER: Transport Controls */}
-                        <div className="flex items-center gap-4 md:gap-6">
-                            <button onClick={previous} className="text-white/50 hover:text-white transition-all hover:scale-110">
-                                <SkipBack size={24} fill="currentColor" />
+                        <div className="flex items-center gap-4 md:gap-8">
+                            <button onClick={previous} className="group p-2">
+                                <SkipBack size={20} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" />
                             </button>
 
                             <button
                                 onClick={toggleShuffle}
-                                className={`p-1 transition-colors ${shuffle ? 'text-[#d4af37]' : 'text-white/50 hover:text-white'}`}
+                                className={`p-1.5 rounded-sm border ${shuffle ? 'border-[var(--color-accent-gold)] text-[var(--color-accent-gold)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
                                 title="Shuffle"
                             >
-                                <Shuffle size={18} />
+                                <Shuffle size={14} />
                             </button>
 
                             <button
                                 onClick={isPlaying ? pause : resume}
-                                className="w-14 h-14 rounded-full bg-[#d4af37] text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+                                className="w-16 h-16 rounded-full bg-transparent border border-[var(--color-accent-gold)] text-[var(--color-accent-gold)] flex items-center justify-center hover:bg-[var(--color-accent-gold)] hover:text-[var(--color-void)] transition-all duration-300 shadow-[0_0_15px_rgba(212,175,55,0.1)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]"
                             >
                                 {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
                             </button>
 
                             <button
                                 onClick={toggleRepeat}
-                                className={`p-1 transition-colors ${repeat !== 'none' ? 'text-[#d4af37]' : 'text-white/50 hover:text-white'}`}
+                                className={`p-1.5 rounded-sm border ${repeat !== 'none' ? 'border-[var(--color-accent-gold)] text-[var(--color-accent-gold)]' : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
                                 title="Repeat"
                             >
-                                {repeat === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
+                                {repeat === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
                             </button>
 
-                            <button onClick={next} className="text-white/50 hover:text-white transition-all hover:scale-110">
-                                <SkipForward size={24} fill="currentColor" />
+                            <button onClick={next} className="group p-2">
+                                <SkipForward size={20} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" />
                             </button>
                         </div>
 
                         {/* RIGHT: Utilities */}
-                        <div className="flex items-center gap-2 md:gap-3 flex-1 justify-end">
+                        <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end">
                             {/* Favorite */}
                             <button
                                 onClick={handleFavoriteClick}
-                                className={`p-2 transition-colors ${isFavorite ? 'text-red-500' : 'text-white/40 hover:text-white'}`}
+                                className={`p-2 transition-colors ${isFavorite ? 'text-red-500' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
                                 title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                             >
-                                <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+                                <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
                             </button>
 
                             {/* Add to Playlist */}
                             <button
                                 onClick={() => setShowPlaylistSelector(true)}
-                                className="p-2 text-white/40 hover:text-[#d4af37] transition-colors"
+                                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] transition-colors"
                                 title="Add to playlist"
                             >
-                                <Plus size={18} />
+                                <Plus size={16} />
                             </button>
 
                             {/* Queue */}
                             <button
                                 onClick={() => setShowQueue(!showQueue)}
-                                className={`p-2 transition-colors ${showQueue ? 'text-[#d4af37]' : 'text-white/40 hover:text-white'}`}
+                                className={`p-2 transition-colors ${showQueue ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
                                 title="Queue"
                             >
-                                <ListMusic size={18} />
+                                <ListMusic size={16} />
                             </button>
 
                             {/* Volume Control */}
-                            <div className="hidden md:flex items-center gap-2 group/vol">
+                            <div className="hidden md:flex items-center gap-2 group/vol pl-4 border-l border-[var(--color-border)]">
                                 <button
                                     onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
-                                    className="text-white/40 hover:text-white transition-colors"
+                                    className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                                 >
-                                    {volume === 0 ? <VolumeX size={18} /> : volume < 0.5 ? <Volume1 size={18} /> : <Volume2 size={18} />}
+                                    {volume === 0 ? <VolumeX size={16} /> : volume < 0.5 ? <Volume1 size={16} /> : <Volume2 size={16} />}
                                 </button>
                                 <input
                                     type="range"
@@ -402,25 +408,25 @@ export function FullscreenPlayer({
                                     step="0.01"
                                     value={volume}
                                     onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                    className="w-0 group-hover/vol:w-20 transition-all duration-300 opacity-0 group-hover/vol:opacity-100 accent-[#d4af37] h-1 bg-white/10 rounded-full appearance-none cursor-pointer"
+                                    className="w-16 accent-[var(--color-accent-gold)] h-0.5 bg-[var(--color-text-muted)]/30 rounded-full appearance-none cursor-pointer"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Row 2: Waveform Scrubber */}
-                    <div className="w-full h-12 group flex items-center relative">
+                    <div className="w-full h-10 group flex items-center relative border-t border-[var(--color-border)] pt-4">
                         <BreathingWaveform
-                            height={48}
+                            height={32}
                             color={themeColor}
                             showProgress={true}
-                            className="w-full opacity-70 group-hover:opacity-100 transition-opacity"
+                            className="w-full opacity-50 group-hover:opacity-100 transition-opacity"
                         />
                         {/* Time display on hover */}
-                        <div className="absolute left-0 -bottom-5 text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute left-0 -bottom-3 text-[9px] text-[var(--color-text-muted)] font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
                             {formatTime(currentTime)}
                         </div>
-                        <div className="absolute right-0 -bottom-5 text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute right-0 -bottom-3 text-[9px] text-[var(--color-text-muted)] font-mono opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
                             {formatTime(duration)}
                         </div>
                     </div>

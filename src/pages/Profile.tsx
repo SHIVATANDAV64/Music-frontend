@@ -1,11 +1,10 @@
 /**
- * Profile Page - The Listener's Identity
+ * Profile Page - User Dossier
  * 
- * Philosophy: Each listener is unique, with their own journey through sound.
- * Display their story with warmth and personality.
+ * Philosophy: Digital Identity Record.
+ * Structure: Technical metadata profile.
  */
-import { Music, Heart, Clock, ListMusic, Settings, LogOut } from 'lucide-react';
-import { AmbientGlow } from '../components/ui';
+import { Heart, Clock, ListMusic, Settings, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -27,8 +26,11 @@ export function Profile() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-[#c9a962] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-[var(--color-void)] text-[var(--color-accent-gold)]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border border-[var(--color-accent-gold)] border-t-transparent animate-spin" />
+                    <span className="font-mono text-xs uppercase tracking-widest">Loading Profile Data...</span>
+                </div>
             </div>
         );
     }
@@ -36,94 +38,133 @@ export function Profile() {
     if (!user) return null;
 
     const menuItems = [
-        { icon: Heart, label: 'Favorites', href: '/favorites', description: 'Sounds that moved you' },
-        { icon: ListMusic, label: 'Playlists', href: '/playlists', description: 'Your curated collections' },
-        { icon: Clock, label: 'Listening History', href: '/history', description: 'Your journey through sound' },
-        { icon: Settings, label: 'Settings', href: '/settings', description: 'Preferences and account' },
+        { icon: Heart, label: 'Favorites', href: '/favorites', description: 'DATABASE_SAVED_ITEMS', code: 'FAV-01' },
+        { icon: ListMusic, label: 'Playlists', href: '/playlists', description: 'USER_COLLECTIONS', code: 'PL-02' },
+        { icon: Clock, label: 'History', href: '/history', description: 'TEMPORAL_LOGS', code: 'HST-03' },
+        { icon: Settings, label: 'Settings', href: '/settings', description: 'SYSTEM_CONFIG', code: 'CFG-04' },
     ];
 
     return (
-        <div className="min-h-screen relative">
-            <AmbientGlow isActive={true} intensity={0.15} />
+        <div className="min-h-screen p-8 p-12-lg">
+            {/* Header / Identity Card */}
+            <div className="max-w-5xl mx-auto mb-12">
+                <div className="relative p-8 border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
+                    {/* Background Grid */}
+                    <div
+                        className="absolute inset-0 bg-[size:40px_40px] pointer-events-none"
+                        style={{
+                            backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`
+                        }}
+                    />
 
-            <div className="max-w-4xl mx-auto px-8 py-16">
-                {/* Profile Header */}
-                <div className="flex items-center gap-8 mb-16">
-                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#c9a962] to-[#8b6914] flex items-center justify-center shadow-lg">
-                        <span className="text-5xl font-serif text-[#0a0a0a]">
-                            {user.username?.charAt(0).toUpperCase() || 'U'}
-                        </span>
-                    </div>
-                    <div>
-                        <p className="text-[#4a5e4a] text-xs uppercase tracking-widest mb-2">
-                            Welcome back
-                        </p>
-                        <h1 className="text-4xl md:text-5xl font-serif text-[#fafaf5] mb-2">
-                            {user.username}
-                        </h1>
-                        {user.is_admin && (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#c9a962]/20 text-[#c9a962] text-xs uppercase tracking-wider">
-                                <Music size={12} /> Admin
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                        {/* Avatar Frame */}
+                        <div className="relative group">
+                            <div className="w-32 h-32 bg-[var(--color-void)] border border-[var(--color-accent-gold)]/30 flex items-center justify-center p-1">
+                                <div className="w-full h-full bg-[var(--color-accent-gold)]/10 flex items-center justify-center text-[var(--color-accent-gold)] font-display text-5xl">
+                                    {user.username?.charAt(0).toUpperCase() || 'U'}
+                                </div>
+                            </div>
+                            {/* Tech Corners */}
+                            <div className="absolute -top-1 -left-1 w-3 h-3 border-l border-t border-[var(--color-accent-gold)]" />
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 border-r border-b border-[var(--color-accent-gold)]" />
+
+                            <div className="absolute top-2 right-2 flex gap-1">
+                                <div className="w-1 h-1 bg-[var(--color-accent-gold)] rounded-full animate-pulse" />
+                                <div className="w-1 h-1 bg-[var(--color-accent-gold)] rounded-full animate-pulse delay-75" />
+                                <div className="w-1 h-1 bg-[var(--color-accent-gold)] rounded-full animate-pulse delay-150" />
+                            </div>
+                        </div>
+
+                        {/* Text Info */}
+                        <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-3">
+                                <span className="font-mono text-[10px] text-[var(--color-accent-gold)] uppercase tracking-[0.2em] border border-[var(--color-accent-gold)]/30 px-2 py-0.5">
+                                    Operator Status: Active
+                                </span>
+                                {user.is_admin && (
+                                    <span className="font-mono text-[10px] text-red-500 uppercase tracking-[0.2em] border border-red-500/30 px-2 py-0.5 flex items-center gap-2">
+                                        <Shield size={10} /> Root Access
+                                    </span>
+                                )}
+                            </div>
+
+                            <h1 className="font-display text-4xl md:text-5xl text-[var(--color-text-primary)] tracking-wider uppercase">
+                                {user.username}
+                            </h1>
+
+                            <div className="flex items-center gap-4 text-[var(--color-text-muted)] font-mono text-xs">
+                                <span>ID: {user.$id}</span>
+                                <span>//</span>
+                                <span>MAIL: {user.email}</span>
+                            </div>
+                        </div>
+
+                        {/* Sign Out Action */}
+                        <button
+                            onClick={handleLogout}
+                            className="group flex flex-col items-end gap-1 text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
+                        >
+                            <LogOut size={24} />
+                            <span className="font-mono text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                Terminate
                             </span>
-                        )}
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                {/* Menu Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-                    {menuItems.map((item) => (
-                        <Link
-                            key={item.label}
-                            to={item.href}
-                            className="p-6 rounded-2xl bg-[#111111] border border-white/5 hover:border-[#c9a962]/30 transition-all group"
-                        >
+            {/* Content Grid */}
+            <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--color-border)] border border-[var(--color-border)]">
+                {/* Menu Items */}
+                {menuItems.map((item) => (
+                    <Link
+                        key={item.label}
+                        to={item.href}
+                        className="group relative p-8 bg-[var(--color-void)] hover:bg-[var(--color-card)] transition-colors overflow-hidden"
+                    >
+                        <div className="relative z-10 flex items-start justify-between">
                             <div className="flex items-start gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-[#1a1a1a] group-hover:bg-[#c9a962]/10 flex items-center justify-center transition-colors">
-                                    <item.icon size={22} className="text-[#c9a962]" />
+                                <div className="w-10 h-10 border border-[var(--color-border)] flex items-center justify-center text-[var(--color-accent-gold)] group-hover:border-[var(--color-accent-gold)] group-hover:bg-[var(--color-accent-gold)]/10 transition-all">
+                                    <item.icon size={20} strokeWidth={1.5} />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-[#fafaf5] mb-1">
-                                        {item.label}
-                                    </h3>
-                                    <p className="text-sm text-[#fafaf5]/50">
-                                        {item.description}
-                                    </p>
+                                    <h3 className="font-display text-lg text-[var(--color-text-primary)] mb-1 tracking-wide group-hover:text-[var(--color-accent-gold)] transition-colors">{item.label}</h3>
+                                    <p className="font-mono text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">{item.description}</p>
                                 </div>
                             </div>
-                        </Link>
-                    ))}
-                </div>
+                            <span className="font-mono text-[10px] text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors">
+                                {item.code}
+                            </span>
+                        </div>
 
-                {/* Admin Link */}
+                        {/* Corner Hover Effect */}
+                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-r-[20px] border-t-transparent border-r-transparent group-hover:border-r-[var(--color-accent-gold)] transition-all duration-300" />
+                    </Link>
+                ))}
+
+                {/* Admin Block (Full Width if odd) */}
                 {user.is_admin && (
-                    <div className="mb-8">
-                        <Link
-                            to="/admin"
-                            className="flex items-center gap-4 p-6 rounded-2xl bg-gradient-to-r from-[#c9a962]/10 to-transparent border border-[#c9a962]/30 hover:border-[#c9a962]/50 transition-colors"
-                        >
-                            <div className="w-12 h-12 rounded-xl bg-[#c9a962]/20 flex items-center justify-center">
-                                <Music size={22} className="text-[#c9a962]" />
+                    <Link
+                        to="/admin"
+                        className="md:col-span-2 group relative p-8 bg-[var(--color-void)] hover:bg-[var(--color-card)] transition-colors border-t border-[var(--color-border)]"
+                    >
+                        <div className="relative z-10 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 border border-[var(--color-accent-primary)]/50 flex items-center justify-center text-[var(--color-accent-primary)] group-hover:bg-[var(--color-accent-primary)]/10 transition-all">
+                                    <Shield size={20} strokeWidth={1.5} />
+                                </div>
+                                <div>
+                                    <h3 className="font-display text-lg text-[var(--color-text-primary)] mb-1 tracking-wide group-hover:text-[var(--color-accent-primary)] transition-colors">Admin Console</h3>
+                                    <p className="font-mono text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Execute System Operations</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-[#c9a962]">
-                                    Admin Dashboard
-                                </h3>
-                                <p className="text-sm text-[#fafaf5]/50">
-                                    Upload and manage content
-                                </p>
-                            </div>
-                        </Link>
-                    </div>
+                            <span className="font-mono text-[10px] text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-primary)] transition-colors">
+                                SYS-ROOT
+                            </span>
+                        </div>
+                    </Link>
                 )}
-
-                {/* Logout */}
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-6 py-3 rounded-xl border border-white/10 text-[#fafaf5]/60 hover:border-red-500/30 hover:text-red-400 transition-colors"
-                >
-                    <LogOut size={18} />
-                    <span>Sign out</span>
-                </button>
             </div>
         </div>
     );

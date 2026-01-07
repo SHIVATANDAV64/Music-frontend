@@ -1,117 +1,87 @@
-/**
- * Login Page
- * Email/password authentication form
- */
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui';
 
-export function Login() {
-    const navigate = useNavigate();
-    const { login, isAuthenticated } = useAuth();
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { AuthLayout } from '../components/layout/AuthLayout';
+import { InputGroup } from '../components/ui/InputGroup';
+import { MagneticButton } from '../components/ui/MagneticButton';
+
+export const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    // Redirect if already authenticated
-    useEffect(() => {
-        if (isAuthenticated) {
-            navigate('/home');
-        }
-    }, [isAuthenticated, navigate]);
+    const { login } = useAuth();
+    const navigate = useNavigate();
 
-    async function handleSubmit(e: React.FormEvent) {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('[Login] handleSubmit started');
         setError('');
-        setIsLoading(true);
+        setLoading(true);
 
         try {
-            console.log('[Login] Calling auth.login...');
             await login(email, password);
-            console.log('[Login] auth.login success, navigating to /home');
             navigate('/home');
         } catch (err: any) {
-            console.error('[Login] handleSubmit error:', err);
-            setError(err.message || 'Invalid email or password');
+            console.error('Login error:', err);
+            setError(err.message || 'Failed to login');
         } finally {
-            setIsLoading(false);
-            console.log('[Login] handleSubmit finished');
+            setLoading(false);
         }
-    }
+    };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-bg-primary">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md"
-            >
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-accent to-purple-400 bg-clip-text text-transparent">
-                        SoundWave
-                    </h1>
-                    <p className="text-text-secondary mt-2">Welcome back</p>
+        <AuthLayout
+            title="Welcome Back"
+            subtitle="Sign in to continue your journey."
+        >
+            {error && (
+                <div className="mb-6 rounded-lg bg-red-500/10 p-3 text-center text-sm text-red-500 border border-red-500/20">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-2">
+                <InputGroup
+                    id="email"
+                    label="Email Address"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
+
+                <InputGroup
+                    id="password"
+                    label="Password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+
+                <div className="flex justify-end pt-2 pb-6">
+                    <button type="button" className="text-xs text-white/40 hover:text-white transition-colors">
+                        Forgot Password?
+                    </button>
                 </div>
 
-                {/* Form Card */}
-                <div className="glass rounded-2xl p-8">
-                    <h2 className="text-2xl font-semibold mb-6">Log in</h2>
+                <MagneticButton
+                    type="submit"
+                    className="w-full !rounded-xl justify-center"
+                    disabled={loading}
+                >
+                    {loading ? 'Authenticating...' : 'Sign In'}
+                </MagneticButton>
+            </form>
 
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-error/10 text-error text-sm"
-                        >
-                            <AlertCircle size={18} />
-                            {error}
-                        </motion.div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
-                            <input
-                                type="email"
-                                placeholder="Email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="w-full pl-10 pr-4 py-3 rounded-lg glass text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50"
-                            />
-                        </div>
-
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full pl-10 pr-4 py-3 rounded-lg glass text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent/50"
-                            />
-                        </div>
-
-                        <Button type="submit" className="w-full" isLoading={isLoading}>
-                            Log in
-                        </Button>
-                    </form>
-
-                    <p className="text-center text-text-secondary mt-6 text-sm">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="text-accent hover:underline">
-                            Sign up
-                        </Link>
-                    </p>
-                </div>
-            </motion.div>
-        </div>
+            <div className="mt-8 text-center text-sm text-white/40">
+                Don't have an account?{' '}
+                <Link to="/register" className="text-neon-primary hover:text-white transition-colors border-b border-transparent hover:border-white">
+                    Create one
+                </Link>
+            </div>
+        </AuthLayout>
     );
-}
+};

@@ -7,7 +7,7 @@ import { account, databases, DATABASE_ID, COLLECTIONS, ID } from '../lib/appwrit
 import type { User, AuthState } from '../types';
 
 interface AuthContextType extends AuthState {
-    signup: (email: string, password: string, username: string) => Promise<void>;
+    register: (email: string, password: string, username: string) => Promise<void>;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    async function signup(email: string, password: string, username: string) {
+    async function register(email: string, password: string, username: string) {
         console.log('[Auth] Signup started for:', email);
         try {
             // Create account
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <AuthContext.Provider
             value={{
                 ...state,
-                signup,
+                register,
                 login,
                 logout,
                 refreshUser,

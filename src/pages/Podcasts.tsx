@@ -28,46 +28,45 @@ export function Podcasts() {
     }, []);
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                    <Mic2 size={24} className="text-green-400" />
+        <div className="min-h-screen p-8 p-12-lg">
+            {/* Header / Identity Card */}
+            <div className="max-w-[1800px] mx-auto mb-12">
+                <div className="flex items-center gap-4 mb-8">
+                    <span className="font-mono text-xs text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 px-2 py-1">03</span>
+                    <h1 className="text-3xl font-display text-[var(--color-text-primary)] tracking-wide">
+                        Broadcasts
+                    </h1>
                 </div>
-                <div>
-                    <h1 className="text-3xl font-display font-bold">Podcasts</h1>
-                    <p className="text-text-secondary">Discover shows</p>
-                </div>
-            </div>
 
-            {/* Podcasts Grid */}
-            {isLoading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {[...Array(10)].map((_, i) => (
-                        <div key={i} className="p-4 rounded-xl glass">
-                            <div className="aspect-square rounded-lg skeleton mb-4" />
-                            <div className="h-4 rounded skeleton mb-2" />
-                            <div className="h-3 rounded skeleton w-2/3" />
+                <div className="h-px bg-[var(--color-border)] w-full mb-8" />
+
+                {/* Podcasts Grid */}
+                {isLoading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                        {[...Array(10)].map((_, i) => (
+                            <div key={i} className="aspect-[4/5] bg-[var(--color-card)] animate-pulse rounded-lg border border-[var(--color-border)]" />
+                        ))}
+                    </div>
+                ) : podcasts.length === 0 ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-16"
+                    >
+                        <div className="w-16 h-16 rounded-full bg-[var(--color-card)] border border-[var(--color-border)] flex items-center justify-center mx-auto mb-4">
+                            <Mic2 size={24} className="text-[var(--color-text-muted)]" />
                         </div>
-                    ))}
-                </div>
-            ) : podcasts.length === 0 ? (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-16"
-                >
-                    <Mic2 size={48} className="mx-auto text-text-secondary/50 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No podcasts yet</h3>
-                    <p className="text-text-secondary">Check back later for new shows!</p>
-                </motion.div>
-            ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {podcasts.map((podcast) => (
-                        <PodcastCard key={podcast.$id} podcast={podcast} />
-                    ))}
-                </div>
-            )}
+                        <h3 className="text-xl font-display text-[var(--color-text-primary)] mb-2">No Signal Detected</h3>
+                        <p className="font-mono text-xs text-[var(--color-text-muted)] tracking-widest uppercase">Broadcast channels are offline</p>
+                    </motion.div>
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                        {podcasts.map((podcast) => (
+                            <PodcastCard key={podcast.$id} podcast={podcast} />
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

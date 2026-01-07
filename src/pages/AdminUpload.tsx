@@ -1,17 +1,19 @@
 /**
- * Admin Upload Page
- * Upload audio files and manage content (admin only)
+ * Admin Upload Page - Ingestion Terminal
+ * 
+ * Philosophy: Data Ingestion Port.
+ * Industrial, high-contrast, strictly functional.
  */
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Upload, Music, Mic2, X, Check, AlertCircle } from 'lucide-react';
+
+import { Upload, X, Check, AlertCircle, Trash2, FileAudio, Image as ImageIcon, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { storage, BUCKETS, ID } from '../lib/appwrite';
 import { adminUpload } from '../lib/functions';
 import { musicService } from '../services/musicService';
 import { usePlayer } from '../context/PlayerContext';
-import { Trash2, Play } from 'lucide-react';
 import { getTrackCoverUrl } from '../utils/trackUtils';
+import { Button, Input } from '../components/ui';
 import type { Track } from '../types';
 
 type ContentType = 'track' | 'podcast';
@@ -25,7 +27,7 @@ interface UploadState {
 
 export function AdminUpload() {
     const { user, isAuthenticated } = useAuth();
-    const { play } = usePlayer();
+    const { } = usePlayer();
     const [contentType, setContentType] = useState<ContentType>('track');
     const [uploadedTracks, setUploadedTracks] = useState<Track[]>([]);
     const [isLoadingTracks, setIsLoadingTracks] = useState(false);
@@ -50,7 +52,7 @@ export function AdminUpload() {
     }
 
     async function handleDeleteTrack(track: Track) {
-        if (!confirm('Are you sure you want to delete this track? This cannot be undone.')) return;
+        if (!confirm('CONFIRM DELETION: This action is irreversible. Proceed?')) return;
 
         try {
             await musicService.deleteTrack(track);
@@ -91,11 +93,11 @@ export function AdminUpload() {
     // Check admin access
     if (!isAuthenticated || !user?.is_admin) {
         return (
-            <div className="flex flex-col items-center justify-center py-20">
-                <AlertCircle size={64} className="text-error/50 mb-4" />
-                <h2 className="text-2xl font-display font-semibold mb-2">Access Denied</h2>
-                <p className="text-secondary">
-                    You must be an admin to access this page.
+            <div className="flex flex-col items-center justify-center py-20 border border-red-500/20 bg-red-500/5 m-8">
+                <AlertCircle size={64} className="text-red-500 mb-4" />
+                <h2 className="text-2xl font-display font-bold text-red-500 mb-2 uppercase tracking-widest">Access Denied</h2>
+                <p className="font-mono text-red-500/60 uppercase">
+                    Clearance Level Insufficient. Admin Privileges Required.
                 </p>
             </div>
         );
@@ -103,7 +105,7 @@ export function AdminUpload() {
 
     async function handleUpload() {
         if (!audioFile) {
-            setUploadState((s) => ({ ...s, error: 'Audio file is required' }));
+            setUploadState((s) => ({ ...s, error: 'AUDIO_FILE_MISSING' }));
             return;
         }
 
@@ -131,10 +133,8 @@ export function AdminUpload() {
                     coverImageId = coverUpload.$id;
                 } catch (e: any) {
                     console.error('Cover upload failed:', e);
-                    // Don't block the audio upload if only cover fails, 
-                    // but inform the user if it's a permission issue
                     if (e.code === 401 || e.code === 403) {
-                        alert('Warning: Cover image upload failed due to permission issues with the COVERS bucket. The track will be uploaded without a cover.');
+                        alert('WARNING: COVER_UPLOAD_PERMISSION_DENIED. PROCEEDING_WITHOUT_COVER.');
                     }
                 }
             }
@@ -142,7 +142,6 @@ export function AdminUpload() {
             setUploadState((s) => ({ ...s, progress: 70 }));
 
             if (contentType === 'track') {
-                // Create track document via function
                 const result = await adminUpload({
                     contentType: 'track',
                     data: {
@@ -157,11 +156,8 @@ export function AdminUpload() {
                         coverFilename: coverFile?.name || null,
                     },
                 });
-                if (!result.success) {
-                    throw new Error(result.error || 'Failed to create track');
-                }
+                if (!result.success) throw new Error(result.error || 'TRACK_CREATION_FAILED');
             } else {
-                // Create podcast document via function
                 const result = await adminUpload({
                     contentType: 'podcast',
                     data: {
@@ -172,28 +168,25 @@ export function AdminUpload() {
                         coverImageId: coverImageId,
                     },
                 });
-                if (!result.success) {
-                    throw new Error(result.error || 'Failed to create podcast');
-                }
+                if (!result.success) throw new Error(result.error || 'PODCAST_CREATION_FAILED');
             }
 
             setUploadState({ isUploading: false, progress: 100, error: null, success: true });
 
-            // Reset form
+            // Reset
             setTrackForm({ title: '', artist: '', album: '', genre: '', duration: 0 });
             setPodcastForm({ title: '', author: '', description: '', category: '' });
             setAudioFile(null);
             setCoverFile(null);
-
-            // Refresh content list
             loadUploadedContent();
+
         } catch (error) {
             console.error('Upload error:', error);
-            const msg = error instanceof Error ? error.message : 'Unknown error';
+            const msg = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
             let userMsg = msg;
 
             if (msg.includes('401') || msg.includes('403') || msg.includes('unauthorized')) {
-                userMsg = 'Permission Denied: Please check Storage Bucket permissions in Appwrite Console. You may need to allow "write" access for Admins.';
+                userMsg = 'PERMISSION_DENIED: CHECK_BUCKET_POLICIES';
             }
 
             setUploadState({
@@ -206,7 +199,6 @@ export function AdminUpload() {
     }
 
     function handleAudioPreview(file: File) {
-        // Get duration from audio file
         const audio = new Audio();
         audio.src = URL.createObjectURL(file);
         audio.onloadedmetadata = () => {
@@ -216,148 +208,139 @@ export function AdminUpload() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto p-8 space-y-8">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
-                    <Upload size={24} className="text-accent" />
-                </div>
+            <div className="border-b border-[var(--color-border)] pb-8 flex items-start justify-between">
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-primary">Upload Content</h1>
-                    <p className="text-secondary">Add new tracks or podcasts</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 border border-[var(--color-accent-gold)] text-[var(--color-accent-gold)]">
+                            <Database size={20} />
+                        </div>
+                        <h1 className="text-3xl font-display uppercase tracking-widest text-[var(--color-text-primary)]">Ingestion Terminal</h1>
+                    </div>
+                    <p className="font-mono text-xs text-[var(--color-text-muted)] uppercase tracking-wider pl-[50px]">
+                        // SYSTEM_MODE: UPLOAD__ACTIVE
+                    </p>
+                </div>
+
+                {/* Mode Switcher */}
+                <div className="flex bg-[var(--color-card)] border border-[var(--color-border)] p-1">
+                    <button
+                        onClick={() => setContentType('track')}
+                        className={`px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all ${contentType === 'track'
+                            ? 'bg-[var(--color-accent-gold)] text-black font-bold'
+                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                            }`}
+                    >
+                        Track_Mode
+                    </button>
+                    <button
+                        onClick={() => setContentType('podcast')}
+                        className={`px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all ${contentType === 'podcast'
+                            ? 'bg-[var(--color-accent-gold)] text-black font-bold'
+                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                            }`}
+                    >
+                        Podcast_Mode
+                    </button>
                 </div>
             </div>
 
-            <div className="flex gap-3">
-                <button
-                    onClick={() => setContentType('track')}
-                    className={`flex-1 p-4 rounded-xl flex items-center justify-center gap-2 transition-all ${contentType === 'track'
-                        ? 'btn-primary shadow-lg shadow-accent/20'
-                        : 'glass text-secondary hover:bg-hover'
-                        }`}
-                >
-                    <Music size={20} />
-                    Track
-                </button>
-                <button
-                    onClick={() => setContentType('podcast')}
-                    className={`flex-1 p-4 rounded-xl flex items-center justify-center gap-2 transition-all ${contentType === 'podcast'
-                        ? 'btn-primary shadow-lg shadow-accent/20'
-                        : 'glass text-secondary hover:bg-hover'
-                        }`}
-                >
-                    <Mic2 size={20} />
-                    Podcast
-                </button>
-            </div>
+            {/* Upload Form Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Col: Metadata Form */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-[var(--color-card)] border border-[var(--color-border)] p-6 relative group">
+                        <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-[var(--color-border)] group-hover:border-[var(--color-accent-gold)] transition-colors" />
 
-            {/* Upload Form */}
-            <div className="glass rounded-xl p-6 space-y-4">
-                {contentType === 'track' ? (
-                    <>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Title *</label>
-                            <input
-                                type="text"
-                                value={trackForm.title}
-                                onChange={(e) => setTrackForm((f) => ({ ...f, title: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                placeholder="Track title"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Artist *</label>
-                            <input
-                                type="text"
-                                value={trackForm.artist}
-                                onChange={(e) => setTrackForm((f) => ({ ...f, artist: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                placeholder="Artist name"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2 text-primary">Album</label>
-                                <input
-                                    type="text"
-                                    value={trackForm.album}
-                                    onChange={(e) => setTrackForm((f) => ({ ...f, album: e.target.value }))}
-                                    className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                    placeholder="Album name"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2 text-primary">Genre</label>
-                                <select
-                                    value={trackForm.genre}
-                                    onChange={(e) => setTrackForm((f) => ({ ...f, genre: e.target.value }))}
-                                    className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                >
-                                    <option value="">Select genre</option>
-                                    <option value="Pop">Pop</option>
-                                    <option value="Rock">Rock</option>
-                                    <option value="Hip-Hop">Hip-Hop</option>
-                                    <option value="Electronic">Electronic</option>
-                                    <option value="Classical">Classical</option>
-                                    <option value="Jazz">Jazz</option>
-                                    <option value="R&B">R&B</option>
-                                </select>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Title *</label>
-                            <input
-                                type="text"
-                                value={podcastForm.title}
-                                onChange={(e) => setPodcastForm((f) => ({ ...f, title: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                placeholder="Podcast title"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Author *</label>
-                            <input
-                                type="text"
-                                value={podcastForm.author}
-                                onChange={(e) => setPodcastForm((f) => ({ ...f, author: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                placeholder="Author name"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Description</label>
-                            <textarea
-                                value={podcastForm.description}
-                                onChange={(e) => setPodcastForm((f) => ({ ...f, description: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors resize-none"
-                                rows={3}
-                                placeholder="Podcast description"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-primary">Category</label>
-                            <input
-                                type="text"
-                                value={podcastForm.category}
-                                onChange={(e) => setPodcastForm((f) => ({ ...f, category: e.target.value }))}
-                                className="w-full px-4 py-3 rounded-xl bg-secondary text-primary border border-theme focus:border-accent outline-none transition-colors"
-                                placeholder="e.g., Technology, Comedy, News"
-                            />
-                        </div>
-                    </>
-                )}
+                        <h3 className="font-display text-[var(--color-text-primary)] mb-6 uppercase tracking-wider">Metadata Parameters</h3>
 
-                {/* File Uploads */}
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                    {/* Audio File */}
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-primary">
-                            Audio File * {trackForm.duration > 0 && `(${Math.floor(trackForm.duration / 60)}:${String(trackForm.duration % 60).padStart(2, '0')})`}
+                        <div className="space-y-4">
+                            {contentType === 'track' ? (
+                                <>
+                                    <Input
+                                        label="Title"
+                                        value={trackForm.title}
+                                        onChange={(e) => setTrackForm((f) => ({ ...f, title: e.target.value }))}
+                                        placeholder="TRACK_INDENTIFIER"
+                                    />
+                                    <Input
+                                        label="Artist"
+                                        value={trackForm.artist}
+                                        onChange={(e) => setTrackForm((f) => ({ ...f, artist: e.target.value }))}
+                                        placeholder="ARTIST_KEY"
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Album"
+                                            value={trackForm.album}
+                                            onChange={(e) => setTrackForm((f) => ({ ...f, album: e.target.value }))}
+                                            placeholder="ALBUM_REF"
+                                        />
+                                        <div className="space-y-2 group">
+                                            <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--color-text-muted)] group-focus-within:text-[var(--color-accent-gold)] transition-colors">
+                                                Genre_Tag
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={trackForm.genre}
+                                                    onChange={(e) => setTrackForm((f) => ({ ...f, genre: e.target.value }))}
+                                                    className="w-full px-4 py-3 bg-[var(--color-void)] border border-[var(--color-border)] text-[var(--color-text-primary)] font-mono text-sm focus:outline-none focus:border-[var(--color-accent-gold)] transition-all appearance-none"
+                                                >
+                                                    <option value="" className="bg-[var(--color-void)]">SELECT_GENRE</option>
+                                                    {['Pop', 'Rock', 'Hip-Hop', 'Electronic', 'Classical', 'Jazz', 'R&B'].map(g => (
+                                                        <option key={g} value={g} className="bg-[var(--color-void)]">{g.toUpperCase()}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-[var(--color-border)] pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <Input
+                                        label="Podcast Title"
+                                        value={podcastForm.title}
+                                        onChange={(e) => setPodcastForm((f) => ({ ...f, title: e.target.value }))}
+                                    />
+                                    <Input
+                                        label="Author"
+                                        value={podcastForm.author}
+                                        onChange={(e) => setPodcastForm((f) => ({ ...f, author: e.target.value }))}
+                                    />
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--color-text-muted)]">Description</label>
+                                        <textarea
+                                            value={podcastForm.description}
+                                            onChange={(e) => setPodcastForm((f) => ({ ...f, description: e.target.value }))}
+                                            className="w-full px-4 py-3 bg-[var(--color-void)] border border-[var(--color-border)] text-[var(--color-text-primary)] font-mono text-sm focus:border-[var(--color-accent-gold)] outline-none"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <Input
+                                        label="Category"
+                                        value={podcastForm.category}
+                                        onChange={(e) => setPodcastForm((f) => ({ ...f, category: e.target.value }))}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Col: Upload Zones */}
+                <div className="space-y-6">
+                    {/* Audio Upload */}
+                    <div className="bg-[var(--color-card)] border border-[var(--color-border)] p-6">
+                        <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+                            Audio_Payload
+                            {trackForm.duration > 0 && <span className="text-[var(--color-accent-gold)] ml-2">[{Math.floor(trackForm.duration / 60)}:{String(trackForm.duration % 60).padStart(2, '0')}]</span>}
                         </label>
-                        <label className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-theme hover:border-accent cursor-pointer transition-colors">
+                        <label className={`
+                            flex flex-col items-center justify-center h-32 border border-dashed transition-all cursor-pointer group relative overflow-hidden
+                            ${audioFile ? 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)] hover:bg-[var(--color-card-hover)]'}
+                        `}>
                             <input
                                 type="file"
                                 accept="audio/*"
@@ -371,158 +354,115 @@ export function AdminUpload() {
                                 }}
                             />
                             {audioFile ? (
-                                <div className="text-center">
-                                    <Check size={24} className="mx-auto text-success mb-2" />
-                                    <span className="text-sm truncate max-w-full text-primary">{audioFile.name}</span>
+                                <div className="text-center z-10">
+                                    <FileAudio className="mx-auto text-[var(--color-accent-gold)] mb-2" size={24} />
+                                    <p className="font-mono text-[10px] text-[var(--color-accent-gold)] truncate max-w-[150px]">{audioFile.name}</p>
                                 </div>
                             ) : (
-                                <>
-                                    <Music size={24} className="text-secondary mb-2" />
-                                    <span className="text-sm text-secondary">Select audio</span>
-                                </>
+                                <div className="text-center z-10">
+                                    <Upload className="mx-auto text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] mb-2 transition-colors" size={24} />
+                                    <span className="font-mono text-[10px] text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">INITIATE UPLOAD</span>
+                                </div>
                             )}
+
+                            {/* Scanning effect */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent-gold)]/5 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 pointer-events-none" />
                         </label>
                     </div>
 
-                    {/* Cover Image */}
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-primary">Cover Image</label>
-                        <label className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-theme hover:border-accent cursor-pointer transition-colors">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-                            />
+                    {/* Cover Upload */}
+                    <div className="bg-[var(--color-card)] border border-[var(--color-border)] p-6">
+                        <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Visual_Data</label>
+                        <label className={`
+                            flex flex-col items-center justify-center h-32 border border-dashed transition-all cursor-pointer group
+                            ${coverFile ? 'border-[var(--color-accent-gold)] bg-[var(--color-accent-gold)]/5' : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)] hover:bg-[var(--color-card-hover)]'}
+                        `}>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => setCoverFile(e.target.files?.[0] || null)} />
                             {coverFile ? (
                                 <div className="text-center">
-                                    <Check size={24} className="mx-auto text-success mb-2" />
-                                    <span className="text-sm truncate max-w-full text-primary">{coverFile.name}</span>
+                                    <ImageIcon className="mx-auto text-[var(--color-accent-gold)] mb-2" size={24} />
+                                    <p className="font-mono text-[10px] text-[var(--color-accent-gold)] truncate max-w-[150px]">{coverFile.name}</p>
                                 </div>
                             ) : (
-                                <>
-                                    <Upload size={24} className="text-secondary mb-2" />
-                                    <span className="text-sm text-secondary">Select image</span>
-                                </>
+                                <div className="text-center">
+                                    <Upload className="mx-auto text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] mb-2 transition-colors" size={24} />
+                                    <span className="font-mono text-[10px] text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">SELECT IMAGE</span>
+                                </div>
                             )}
                         </label>
                     </div>
-                </div>
 
-                {/* Error/Success Messages */}
-                {uploadState.error && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-2 p-4 rounded-xl bg-error/20 text-error"
+                    <Button
+                        onClick={handleUpload}
+                        isLoading={uploadState.isUploading}
+                        variant="primary"
+                        className="w-full"
+                        disabled={!audioFile || (contentType === 'track' ? !trackForm.title || !trackForm.artist : !podcastForm.title || !podcastForm.author)}
                     >
-                        <X size={18} />
-                        {uploadState.error}
-                    </motion.div>
-                )}
+                        EXECUTE_INGESTION
+                    </Button>
 
-                {uploadState.success && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-2 p-4 rounded-xl bg-success/20 text-success"
-                    >
-                        <Check size={18} />
-                        Upload successful!
-                    </motion.div>
-                )}
-
-                {/* Upload Progress */}
-                {uploadState.isUploading && (
-                    <div className="space-y-2">
-                        <div className="h-2 rounded-full bg-bg-secondary overflow-hidden">
-                            <motion.div
-                                className="h-full bg-accent"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${uploadState.progress}%` }}
-                                transition={{ duration: 0.3 }}
-                            />
+                    {/* Feedback Messages */}
+                    {uploadState.error && (
+                        <div className="p-4 border border-red-500/30 bg-red-500/5 text-red-500 font-mono text-xs flex items-center gap-2">
+                            <X size={14} /> {uploadState.error}
                         </div>
-                        <p className="text-sm text-secondary text-center">
-                            Uploading... {uploadState.progress}%
-                        </p>
-                    </div>
-                )}
-
-                {/* Submit Button */}
-                <button
-                    onClick={handleUpload}
-                    disabled={uploadState.isUploading || !audioFile || (contentType === 'track' ? !trackForm.title || !trackForm.artist : !podcastForm.title || !podcastForm.author)}
-                    className="btn btn-primary w-full py-4 rounded-xl font-bold shadow-xl shadow-black/40 hover:brightness-110 active:scale-95 transition-all"
-                >
-                    {uploadState.isUploading ? 'Uploading...' : `Upload ${contentType === 'track' ? 'Track' : 'Podcast'}`}
-                </button>
+                    )}
+                    {uploadState.success && (
+                        <div className="p-4 border border-[var(--color-accent-gold)]/30 bg-[var(--color-accent-gold)]/5 text-[var(--color-accent-gold)] font-mono text-xs flex items-center gap-2">
+                            <Check size={14} /> INGESTION_COMPLETE
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Manage Content Section */}
-            <div className="pt-12 border-t border-theme">
-                <h2 className="text-2xl font-display font-bold mb-6 text-primary">Manage Content</h2>
+            {/* Database Log */}
+            <div className="mt-12">
+                <div className="flex items-center gap-4 mb-6 border-b border-[var(--color-border)] pb-2">
+                    <h2 className="font-display text-[var(--color-text-primary)] uppercase tracking-widest">Database_Log</h2>
+                    <span className="font-mono text-xs text-[var(--color-text-muted)]">TYPE: AUDIO_TRACKS</span>
+                </div>
 
                 {isLoadingTracks ? (
-                    <div className="text-center py-10 text-text-secondary">Loading content...</div>
+                    <div className="font-mono text-xs text-[var(--color-accent-gold)] animate-pulse">READING_DATABASE...</div>
                 ) : uploadedTracks.length === 0 ? (
-                    <div className="text-center py-10 glass rounded-xl">
-                        <p className="text-secondary">No uploaded content yet.</p>
+                    <div className="p-8 border border-dashed border-[var(--color-border)] text-center font-mono text-xs text-[var(--color-text-muted)]">
+                        LOG_EMPTY
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="border border-[var(--color-border)] divide-y divide-[var(--color-border)] bg-[var(--color-card)]">
                         {uploadedTracks.map((track) => (
-                            <div key={track.$id} className="glass p-4 rounded-xl flex items-center gap-4 hover:bg-white/5 transition-colors group">
-                                {/* Track Image */}
-                                <div className="w-12 h-12 rounded-lg bg-white/10 overflow-hidden relative flex-shrink-0">
+                            <div key={track.$id} className="p-4 flex items-center gap-4 hover:bg-[var(--color-card-hover)] transition-colors group">
+                                <div className="w-8 h-8 bg-[var(--color-void)] flex items-center justify-center relative overflow-hidden">
                                     {getTrackCoverUrl(track) ? (
-                                        <img
-                                            src={getTrackCoverUrl(track)!}
-                                            alt={track.title}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        <img src={getTrackCoverUrl(track)!} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <Music size={20} className="text-white/20" />
-                                        </div>
+                                        <div className="w-full h-full bg-[var(--color-accent-gold)]/20" />
                                     )}
-
-                                    {/* Play Overlay */}
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                        <button
-                                            onClick={() => play(track)}
-                                            className="p-1 rounded-full bg-accent text-white hover:scale-110 transition-transform"
-                                        >
-                                            <Play size={16} fill="currentColor" />
-                                        </button>
-                                    </div>
                                 </div>
 
-                                {/* Track Info */}
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-medium truncate text-primary">{track.title}</h3>
-                                    <p className="text-sm text-secondary truncate">{track.artist}</p>
+                                    <div className="font-mono text-xs text-[var(--color-text-primary)] truncate">{track.title}</div>
+                                    <div className="font-mono text-[10px] text-[var(--color-text-muted)] truncate">{track.artist}</div>
                                 </div>
 
-                                {/* Metadata */}
-                                <div className="hidden md:flex gap-8 text-sm text-secondary">
-                                    <span>{track.genre || 'Unknown Genre'}</span>
-                                    <span>{Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, '0')}</span>
+                                <div className="hidden md:flex gap-8 font-mono text-[10px] text-[var(--color-text-muted)]">
+                                    <span className="w-20">{track.genre || 'N/A'}</span>
+                                    <span className="w-12">{Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, '0')}</span>
                                 </div>
 
-                                {/* Actions */}
                                 <button
                                     onClick={() => handleDeleteTrack(track)}
-                                    className="p-2 rounded-lg hover:bg-error/20 text-secondary hover:text-error transition-colors"
-                                    title="Delete Track"
+                                    className="p-2 text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
+                                    title="PURGE_ENTRY"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={16} />
                                 </button>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     );
 }

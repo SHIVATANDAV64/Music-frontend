@@ -8,22 +8,22 @@
  * should they remember?" - The feeling of music becoming visible.
  */
 import { useEffect, useState, useRef } from 'react';
-import { Play, ArrowRight, Headphones, Clock } from 'lucide-react';
+import { Play, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { MusicCard } from '../components/cards';
-import { CymaticsVisualizer, AmbientGlow, VisualizerToggle } from '../components/ui';
-import { musicService, podcastService, historyService } from '../services';
+import { CymaticsVisualizer, VisualizerToggle } from '../components/ui';
+import { musicService, podcastService } from '../services';
 import { usePlayer } from '../context/PlayerContext';
 import { storage, BUCKETS } from '../lib/appwrite';
 import type { Track, Podcast } from '../types';
-import type { RecentlyPlayedItem } from '../services/history.service';
+
 
 export function Home() {
     const { play, isPlaying, setQueue } = usePlayer();
     const [tracks, setTracks] = useState<Track[]>([]);
     const [featured, setFeatured] = useState<Track | null>(null);
     const [podcasts, setPodcasts] = useState<Podcast[]>([]);
-    const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred' | 'turing' | 'voronoi' | 'hopf'>('chladni');
     const heroRef = useRef<HTMLDivElement>(null);
@@ -31,15 +31,13 @@ export function Home() {
     useEffect(() => {
         async function loadData() {
             try {
-                const [trackData, podcastData, historyData] = await Promise.all([
+                const [trackData, podcastData] = await Promise.all([
                     musicService.getTracks({ limit: 8 }),
                     podcastService.getPodcasts({ limit: 4 }),
-                    historyService.getRecentlyPlayed(10),
                 ]);
                 setTracks(trackData);
                 setFeatured(trackData[0] || null);
                 setPodcasts(podcastData);
-                setRecentlyPlayed(historyData);
 
                 // Set queue for Spotify-like navigation - enables next/previous to work
                 if (trackData.length > 0) {
@@ -56,203 +54,180 @@ export function Home() {
 
 
     return (
-        <div className="relative min-h-screen">
-            {/* Ambient glow - breathing with music */}
-            <AmbientGlow isActive={isPlaying} intensity={0.4} />
+        <div
+            className="relative min-h-screen selection:bg-[var(--color-accent-gold)] selection:text-[var(--color-accent-primary)]"
+            style={{ backgroundColor: 'var(--color-void)' }}
+        >
+            {/* Grid Overlay for Technical Feel */}
+            <div
+                className="fixed inset-0 pointer-events-none z-0"
+                style={{
+                    backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+                    backgroundSize: '100px 100px'
+                }}
+            />
 
             {/* ═══════════════════════════════════════════════════════════════
-                HERO SECTION - The First Impression
-                Large cymatics visualizer + Featured album art
+                HERO SECTION - Audio Blueprint
             ═══════════════════════════════════════════════════════════════ */}
             <section
                 ref={heroRef}
-                className="relative min-h-[85vh] flex items-center justify-center overflow-hidden"
+                className="relative h-screen flex items-center justify-center overflow-hidden border-b border-[var(--color-border)]"
             >
-                {/* Cymatics Visualizer Background - THE HERO */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-[min(80vh,80vw)] h-[min(80vh,80vw)]">
+                {/* Technical HUD Overlays */}
+                <div className="absolute top-0 left-0 w-full h-full p-8 pointer-events-none z-20 flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                        <div className="flex flex-col gap-1">
+                            <span className="font-mono text-[10px] text-[var(--color-accent-gold)] tracking-widest">SYS.AUDIO_ARCH.V4</span>
+                            <span className="font-mono text-[10px] text-[var(--color-text-muted)] tracking-widest">STATUS: ONLINE</span>
+                        </div>
+                        <div className="font-mono text-[10px] text-[var(--color-text-muted)] tracking-widest text-right">
+                            COORD: {tracks.length > 0 ? 'LISTENING' : 'SEARCHING'}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Cymatics Visualizer Background */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-40">
+                    <div className="w-[min(80vh,80vw)] h-[min(80vh,80vw)] grayscale contrast-125 mix-blend-screen">
                         <CymaticsVisualizer mode={visualizerMode} />
                     </div>
                 </div>
 
-                {/* Content Overlay - Hidden when playing to keep visualizer clean */}
-                <div className={`relative z-10 text-center px-8 max-w-4xl mx-auto transition-all duration-1000 ${isPlaying ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`}>
-                    {/* Featured Track Info - Minimal Overlay */}
+                {/* Content Overlay */}
+                <div className={`relative z-10 text-center px-8 max-w-5xl mx-auto transition-all duration-1000 ${isPlaying ? 'opacity-0 pointer-events-none blur-sm' : 'opacity-100 blur-0'}`}>
                     {featured && (
-                        <div className="mb-8 animate-in fade-in zoom-in duration-700">
-                            <h1 className="text-4xl md:text-6xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/80 mb-4 tracking-tight">
+                        <div className="mb-12">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 border border-[var(--color-accent-gold)]/30 rounded-full mb-6 bg-black/40 backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-gold)] animate-pulse" />
+                                <span className="font-mono text-[10px] text-[var(--color-accent-gold)] tracking-widest uppercase">Now Featured</span>
+                            </div>
+
+                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-medium text-[var(--color-text-primary)] mb-2 tracking-tighter leading-[0.9]">
                                 {featured.title}
                             </h1>
-                            <p className="text-xl text-[#d4af37] font-serif italic mb-8">
+                            <p className="text-xl md:text-2xl font-mono text-[var(--color-text-muted)] uppercase tracking-widest mb-10">
                                 {featured.artist}
                             </p>
 
                             <button
                                 onClick={() => play(featured)}
-                                className="inline-flex items-center gap-3 px-8 py-4 bg-[#c9a962] text-[#050505] rounded-full font-semibold text-lg hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(201,169,98,0.3)] hover:shadow-[0_0_50px_rgba(201,169,98,0.5)]"
+                                className="group relative inline-flex items-center gap-4 px-8 py-4 bg-transparent border border-[var(--color-border)] hover:border-[var(--color-accent-gold)] text-[var(--color-text-primary)] transition-all duration-300"
                             >
-                                <Play size={24} fill="currentColor" />
-                                Play Now
+                                <span className="absolute inset-0 bg-[var(--color-accent-gold)] opacity-0 group-hover:opacity-10 transition-opacity" />
+                                <Play size={20} fill="currentColor" className="text-[var(--color-accent-gold)]" />
+                                <span className="font-mono text-sm tracking-widest uppercase group-hover:text-[var(--color-accent-gold)] transition-colors">Initialize Playback</span>
                             </button>
                         </div>
                     )}
-
-                    {/* Visualizer Mode Toggle */}
-                    <div className="flex justify-center mb-8">
-                        <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
-                    </div>
-
-                    {/* Tagline - Mysterious, not corporate */}
-                    <p className="text-[#fafaf5]/40 text-sm uppercase tracking-[0.3em] mb-6">
-                        Sound made visible
-                    </p>
                 </div>
 
-                {/* Scroll indicator */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[#fafaf5]/30">
-                    <span className="text-xs uppercase tracking-widest">Explore</span>
-                    <div className="w-px h-8 bg-gradient-to-b from-[#fafaf5]/30 to-transparent" />
+                {/* Persistent Visualizer Toggle */}
+                <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-20 transition-all duration-500">
+                    <VisualizerToggle mode={visualizerMode} onModeChange={setVisualizerMode} />
                 </div>
             </section>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                RECENTLY PLAYED - Continue where you left off
-            ═══════════════════════════════════════════════════════════════ */}
-            {recentlyPlayed.length > 0 && (
-                <section className="py-16 px-8 md:px-12 lg:px-16 bg-primary">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="flex items-center gap-3 mb-8">
-                            <Clock size={20} className="text-accent" />
-                            <h2 className="text-xl md:text-2xl font-serif text-primary">
-                                Recently Played
-                            </h2>
-                        </div>
-
-                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                            {recentlyPlayed.map((item) => (
-                                <div
-                                    key={item.$id}
-                                    className="flex-shrink-0 w-40 p-4 rounded-xl bg-secondary border border-theme hover:border-accent/30 transition-colors cursor-pointer group"
-                                >
-                                    <div className="aspect-square rounded-lg overflow-hidden mb-3 bg-primary flex items-center justify-center">
-                                        <Headphones size={32} className="text-secondary group-hover:text-accent/50 transition-colors" />
-                                    </div>
-                                    <p className="text-xs text-secondary truncate">
-                                        {item.track_id ? 'Track' : 'Episode'}: {item.track_id || item.episode_id}
-                                    </p>
-                                    {item.resume_position > 0 && (
-                                        <p className="text-xs text-accent mt-1">
-                                            Resume at {Math.floor(item.resume_position / 60)}:{String(Math.floor(item.resume_position % 60)).padStart(2, '0')}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-            )}
 
             {/* ═══════════════════════════════════════════════════════════════
-                RECENT TRACKS - Cards that breathe
+                RECENT DISCOVERIES - Main Data Grid
             ═══════════════════════════════════════════════════════════════ */}
-            <section className="py-24 px-8 md:px-12 lg:px-16">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex items-end justify-between mb-12">
-                        <div>
-                            <p className="text-accent/80 text-xs uppercase tracking-widest mb-2">
-                                Collection
-                            </p>
-                            <h2 className="text-3xl md:text-4xl font-serif text-primary">
-                                Recent Discoveries
-                            </h2>
+            <section className="py-24 px-4 md:px-12 relative">
+                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-[var(--color-border)] left-12 hidden md:block" />
+
+                <div className="max-w-[1800px] mx-auto">
+                    <div className="flex items-end justify-between mb-12 ml-0 md:ml-8 border-b border-[var(--color-border)] pb-6">
+                        <div className="flex items-center gap-4">
+                            <span className="font-mono text-xs text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 px-2 py-1">01</span>
+                            <div>
+                                <h2 className="text-3xl font-display text-[var(--color-text-primary)] tracking-tight">
+                                    Detection Grid
+                                </h2>
+                                <p className="font-mono text-[10px] text-[var(--color-text-muted)] uppercase mt-1 tracking-widest">
+                                    Latest Audio Signals
+                                </p>
+                            </div>
                         </div>
                         <Link
                             to="/music"
-                            className="hidden md:flex items-center gap-2 text-secondary hover:text-accent transition-colors"
+                            className="hidden md:flex items-center gap-2 group"
                         >
-                            <span className="text-sm">View All</span>
-                            <ArrowRight size={16} />
+                            <span className="font-mono text-xs text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors uppercase tracking-widest">View Database</span>
+                            <ArrowRight size={14} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors" />
                         </Link>
                     </div>
 
                     {isLoading ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 ml-0 md:ml-8">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <div key={i} className="p-5 rounded-2xl bg-secondary">
-                                    <div className="aspect-square rounded-xl bg-primary animate-pulse mb-4" />
-                                    <div className="h-4 rounded bg-primary animate-pulse w-3/4 mb-2" />
-                                    <div className="h-3 rounded bg-primary animate-pulse w-1/2" />
-                                </div>
+                                <div key={i} className="aspect-[4/5] bg-[var(--color-void)] animate-pulse rounded-lg border border-[var(--color-border)]" />
                             ))}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 ml-0 md:ml-8">
                             {tracks.slice(0, 8).map((track) => (
-                                <MusicCard key={track.$id} track={track} />
+                                <motion.div
+                                    key={track.$id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.4 }}
+                                >
+                                    <MusicCard track={track} />
+                                </motion.div>
                             ))}
                         </div>
                     )}
 
-                    {/* Mobile view all link */}
-                    <div className="flex justify-center mt-8 md:hidden">
+                    <div className="flex justify-center mt-12 md:hidden">
                         <Link
                             to="/music"
-                            className="flex items-center gap-2 px-6 py-3 rounded-full border border-theme text-secondary hover:border-accent hover:text-accent transition-colors"
+                            className="px-6 py-3 border border-[var(--color-border)] text-xs font-mono uppercase tracking-widest text-[var(--color-text-primary)] hover:border-[var(--color-accent-gold)] hover:text-[var(--color-accent-gold)] transition-colors"
                         >
-                            <span>View Library</span>
-                            <ArrowRight size={16} />
+                            Access Full Database
                         </Link>
                     </div>
                 </div>
             </section>
 
             {/* ═══════════════════════════════════════════════════════════════
-                PODCASTS - If available
+                 PODCASTS - Optional Module
             ═══════════════════════════════════════════════════════════════ */}
             {podcasts.length > 0 && (
-                <section className="py-16 px-8 md:px-12 lg:px-16 bg-primary">
-                    <div className="max-w-7xl mx-auto">
-                        <div className="flex items-end justify-between mb-10">
-                            <div>
-                                <p className="text-accent/80 text-xs uppercase tracking-widest mb-2">
-                                    Listen
-                                </p>
-                                <h2 className="text-2xl md:text-3xl font-serif text-primary">
-                                    Podcasts
-                                </h2>
-                            </div>
-                            <Link
-                                to="/podcasts"
-                                className="flex items-center gap-2 text-secondary hover:text-accent transition-colors"
-                            >
-                                <span className="text-sm">View All</span>
-                                <ArrowRight size={16} />
-                            </Link>
+                <section className="py-20 px-6 md:px-12 border-t border-[var(--color-border)] bg-[var(--color-void)] relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-[var(--color-border)] left-12 hidden md:block" />
+
+                    <div className="max-w-[1800px] mx-auto">
+                        <div className="flex items-center gap-4 mb-10 ml-0 md:ml-8">
+                            <span className="font-mono text-xs text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 px-2 py-1">03</span>
+                            <h2 className="text-xl font-display text-[var(--color-text-primary)] tracking-wide">
+                                Broadcasts
+                            </h2>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 ml-0 md:ml-8">
                             {podcasts.map((podcast) => (
                                 <div
                                     key={podcast.$id}
-                                    className="p-4 rounded-xl bg-secondary border border-theme hover:border-accent/20 transition-colors cursor-pointer group"
+                                    className="group border border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-accent-gold)]/30 transition-colors p-4"
                                 >
-                                    <div className="aspect-square rounded-lg overflow-hidden mb-3 bg-primary">
+                                    <div className="aspect-square mb-4 overflow-hidden bg-black border border-[var(--color-border)] group-hover:border-[var(--color-accent-gold)]/20 transition-colors">
                                         {podcast.cover_image_id ? (
                                             <img
                                                 src={storage.getFilePreview(BUCKETS.COVERS, podcast.cover_image_id, 300, 300).toString()}
                                                 alt={podcast.title}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 grayscale group-hover:grayscale-0"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
-                                                <span className="text-4xl">🎙️</span>
+                                                <span className="text-2xl opacity-20">MIC</span>
                                             </div>
                                         )}
                                     </div>
-                                    <h3 className="font-semibold text-primary truncate text-sm">
+                                    <h3 className="font-display text-sm text-[var(--color-text-primary)] truncate mb-1 group-hover:text-[var(--color-accent-gold)] transition-colors">
                                         {podcast.title}
                                     </h3>
-                                    <p className="text-xs text-secondary truncate">
+                                    <p className="font-mono text-[10px] text-[var(--color-text-muted)] truncate uppercase tracking-wider">
                                         {podcast.author}
                                     </p>
                                 </div>

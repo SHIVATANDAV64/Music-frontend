@@ -1,457 +1,120 @@
-/**
- * SoundWave - Organic Design System
- * 
- * Philosophy: Sound is order we cannot see. Design reveals the invisible.
- * 
- * PRINCIPLES:
- * 1. Resonance, Not Distraction - ripples on water, grass swaying
- * 2. Sacred Proportion - Fibonacci (8, 13, 21, 34, 55), Golden Ratio (1.618)
- * 3. Acoustic Color - colors respond to music mood
- * 4. The Space Between - generous whitespace is silence
- * 5. Material Honesty - no gratuitous gradients
- * 
- * COLOR PALETTE: Forest at dusk, golden light filtering through trees
- */
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
-/* ==========================================================================
-/* ==========================================================================
-   DESIGN TOKENS - PAPER & INK SYSTEM
-   ========================================================================== */
+@theme {
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --animate-pulse-slow: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* Mapping CSS variables to Tailwind colors */
+  --color-void: var(--color-void);
+  --color-card: var(--color-card);
+  --color-card-hover: var(--color-card-hover);
+  --color-accent-primary: var(--color-accent-primary);
+  --color-accent-gold: var(--color-accent-gold);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --color-glass: var(--color-glass);
+}
 
 :root {
-  /* ─────────────────────────────────────────────────────────────────────────
-     FIBONACCI SPACING
-     ───────────────────────────────────────────────────────────────────────── */
-  --space-3: 3px;
-  --space-5: 5px;
-  --space-8: 8px;
-  --space-13: 13px;
-  --space-21: 21px;
-  --space-34: 34px;
-  --space-55: 55px;
-  --space-89: 89px;
+  /* Light Mode (Peach / Cozy / Ascetic) */
+  --color-void: #FAF3ED;
+  /* Soft Peach White */
+  --color-card: #FFF9F5;
+  /* Warm Apricot Cream */
+  --color-card-hover: #FDF1E8;
 
-  /* ─────────────────────────────────────────────────────────────────────────
-     TYPOGRAPHY - Editorial
-     ───────────────────────────────────────────────────────────────────────── */
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --color-accent-primary: #4A3B33;
+  /* Soft Espresso / Cocoa */
+  --color-accent-gold: #D9A066;
+  /* Warm Copper Gold */
 
-  --text-xs: 0.7rem;
-  --text-sm: 0.85rem;
-  --text-base: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.8rem;
-  --text-2xl: 2.8rem;
-  --text-3xl: 4.5rem;
+  --color-text-primary: #5C4A42;
+  /* Warm Terracotta Grey */
+  --color-text-secondary: #8C7A70;
+  --color-text-muted: #BFAEA3;
 
-  /* ─────────────────────────────────────────────────────────────────────────
-     LAYOUT
-     ───────────────────────────────────────────────────────────────────────── */
-  --sidebar-width: 280px;
-
-  /* ─────────────────────────────────────────────────────────────────────────
-     COLOR PALETTE - Ink on Paper
-     ───────────────────────────────────────────────────────────────────────── */
-
-  /* Backgrounds */
-  --bg-deep: #0e0e0e;
-  /* Rich Black Ink */
-  --bg-paper: #161616;
-  /* Dark Charcoal Paper */
-  --bg-surface: #1e1e1e;
-  /* Matte Card Surface */
-  --bg-hover: #252525;
-  /* Slightly lighter ink */
-
-  /* Accents - Organic Pigments */
-  --gold: #d4af37;
-  /* Antique Gold Leaf */
-  --gold-dim: #8a7530;
-  /* Aged Gold */
-  --ink-blue: #2a3b55;
-  /* Deep Indigo Ink */
-  --clay: #8a5a44;
-  /* Terracotta */
-
-  /* Text */
-  /* Text - High Contrast for Accessibility */
-  --text-primary: #ffffff;
-  /* Pure white for primary */
-  --text-secondary: #d4d4d4;
-  /* Light gray for secondary */
-  --text-muted: #a3a3a3;
-  /* Lighter gray for muted */
-
-  /* Semantic Colors Defaults (Dark) */
-  --bg-primary: var(--bg-deep);
-  --bg-secondary: var(--bg-surface);
-  --bg-card: var(--bg-paper);
-  --bg-elevated: var(--bg-hover);
-
-  --border-color: rgba(255, 255, 255, 0.1);
-  --error: #ef4444;
-  --success: #22c55e;
-
-  /* Additional Tokens for Interactions */
-  --gold-light: #e6c15c;
-  --gold-muted: rgba(212, 175, 55, 0.2);
-  --gold-glow: rgba(212, 175, 55, 0.5);
-
-  --duration-natural: 200ms;
-  --duration-breath: 4s;
-  --ease-organic: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-breath: ease-in-out;
-
-  --shadow-gold: 0 0 15px var(--gold-glow);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --color-border: rgba(92, 74, 66, 0.08);
+  /* Warm brown-tinted border */
+  --color-glass: rgba(255, 249, 245, 0.75);
 }
 
-[data-theme='light'] {
-  --bg-deep: #f5f5f5;
-  /* Soft gray instead of pure white */
-  --bg-paper: #ffffff;
-  /* Paper stays white */
-  --bg-surface: #e5e5e5;
-  --bg-hover: #d4d4d4;
+.dark {
+  /* Dark Mode (Deep Void) */
+  --color-void: #050505;
+  --color-card: #0A0A0A;
+  --color-card-hover: #111111;
 
-  --bg-primary: #f5f5f5;
-  --bg-secondary: #ffffff;
+  --color-accent-primary: #FFFFFF;
+  --color-accent-gold: #D4AF37;
 
-  /* Invert ink colors for light mode */
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
+  --color-text-primary: #F0F0F0;
+  --color-text-secondary: #888888;
+  --color-text-muted: #444444;
 
-  --border-color: rgba(0, 0, 0, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-paper: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-glass: rgba(0, 0, 0, 0.4);
 }
 
-/* SEMANTIC UTILITIES */
-.bg-primary {
-  background-color: var(--bg-primary);
-}
-
-.bg-secondary {
-  background-color: var(--bg-secondary);
-}
-
-.text-primary {
-  color: var(--text-primary);
-}
-
-.text-secondary {
-  color: var(--text-secondary);
-}
-
-.text-muted {
-  color: var(--text-muted);
-}
-
-.text-error {
-  color: var(--error);
-}
-
-.bg-paper {
-  background-color: var(--bg-paper);
-}
-
-.bg-surface {
-  background-color: var(--bg-surface);
-}
-
-.bg-hover {
-  background-color: var(--bg-hover);
-}
-
-.text-success {
-  color: var(--success);
-}
-
-.border-theme {
-  border-color: var(--border-color);
-}
-
-.bg-accent {
-  background-color: var(--gold);
-}
-
-.text-accent {
-  color: var(--gold);
-}
-
-.border-accent {
-  border-color: var(--gold);
-}
-
-.text-bg-deep {
-  color: var(--bg-deep);
-}
-
-/* ==========================================================================
-   TEXTURE OVERLAY - The "Paper" Feel
-   ========================================================================== */
-
-#root::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  /* Grain texture - visible but not obstructive */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  opacity: 0.05;
-  pointer-events: none;
-  z-index: 1;
-  /* LOW z-index to not block anything */
-  mix-blend-mode: overlay;
-  background-size: 200px 200px;
-}
-
-/* Surface Utility for Matte Cards */
-.bg-paper-texture {
-  background-color: var(--bg-surface);
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* ==========================================================================
-   LAYOUT - Sacred Proportions
-   ========================================================================== */
-
-/* ==========================================================================
-   LAYOUT - Sacred Proportions
-   ========================================================================== */
-
-.main-content {
-  margin-left: var(--sidebar-width);
-  min-height: 100vh;
-  padding-top: calc(64px + var(--space-34));
-  /* Navbar height (64px) + spacing */
-  padding-left: var(--space-34);
-  padding-right: var(--space-34);
-  padding-bottom: 240px;
-  /* Accounts for player height ~200px + extra spacing */
-}
-
-@media (max-width: 1024px) {
-  .main-content {
-    padding-top: calc(64px + var(--space-21));
-    padding-left: var(--space-21);
-    padding-right: var(--space-21);
-    padding-bottom: 260px;
+@layer base {
+  body {
+    background-color: var(--color-void);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    overflow-x: hidden;
   }
-}
 
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0;
-    padding-top: calc(64px + var(--space-21));
-    padding-left: var(--space-13);
-    padding-right: var(--space-13);
-    padding-bottom: 180px;
+  /* Subtler Film Grain */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
   }
 }
 
-@media (max-width: 480px) {
-  .main-content {
-    padding-top: calc(56px + var(--space-13));
-    padding-left: var(--space-8);
-    padding-right: var(--space-8);
-    padding-bottom: 220px;
-  }
-}
-
-
-/* ==========================================================================
-   CARDS - Material Honesty (No gratuitous gradients)
-   ========================================================================== */
-
-.card {
-  background: var(--bg-card);
-  border-radius: var(--space-13);
-  padding: var(--space-21);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: all var(--duration-natural) var(--ease-organic);
-}
-
-.card:hover {
-  background: var(--bg-elevated);
-  border-color: rgba(255, 255, 255, 0.08);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-}
-
-/* ==========================================================================
-   BUTTONS - Purposeful, minimal
-   ========================================================================== */
-
-.btn {
-  font-family: var(--font-body);
-  font-weight: 500;
-  font-size: var(--text-sm);
-  padding: var(--space-13) var(--space-21);
-  border-radius: var(--space-55);
-  border: none;
-  cursor: pointer;
-  transition: all var(--duration-natural) var(--ease-organic);
-}
-
-.btn-primary {
-  background: var(--gold);
-  color: #0e0e0e;
-}
-
-.btn-primary:hover {
-  background: var(--gold-light);
-  box-shadow: var(--shadow-gold);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-secondary:hover {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
-/* ==========================================================================
-   PROGRESS BAR
-   ========================================================================== */
-
-.progress-track {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--gold);
-  border-radius: 2px;
-  transition: width 100ms linear;
-}
-
-.progress-track:hover {
-  height: 5px;
-}
-
-.progress-track:hover .progress-fill {
-  box-shadow: 0 0 8px var(--gold-glow);
-}
-
-/* ==========================================================================
-   SCROLLBAR - Subtle
-   ========================================================================== */
-
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gold-muted);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gold);
-}
-
-/* ==========================================================================
-   UTILITIES
-   ========================================================================== */
-
-.text-gold {
-  color: var(--gold);
-}
-
-.text-sage {
-  color: var(--sage);
-}
-
-.bg-gold-muted {
-  background: var(--gold-muted);
-}
-
-.bg-sage-muted {
-  background: var(--sage-muted);
-}
-
-/* Glass effect - subtle, for overlays */
-.glass {
-  background: rgba(22, 22, 22, 0.7);
-  -webkit-backdrop-filter: blur(16px);
-  -moz-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.glass-dark {
-  background: rgba(10, 10, 10, 0.85);
-  -webkit-backdrop-filter: blur(20px);
-  -moz-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Skeleton loading */
-.skeleton {
-  background: linear-gradient(90deg,
-      var(--bg-card) 0%,
-      var(--bg-elevated) 50%,
-      var(--bg-card) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--space-8);
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+@layer utilities {
+  .text-hero {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.05em;
   }
 
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* ==========================================================================
-   ANIMATIONS - Organic, natural
-   ========================================================================== */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .text-micro {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--color-text-muted);
   }
 
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes breathe {
-
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.6;
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
-}
 
-.animate-breathe {
-  animation: breathe var(--duration-breath) var(--ease-breath) infinite;
+  /* Manual overrides for Glass if needed, trying standard CSS instead of @apply to be safe */
+  .border-glass {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .bg-glass {
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+  }
 }

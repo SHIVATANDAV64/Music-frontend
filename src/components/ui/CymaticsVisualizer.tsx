@@ -364,7 +364,7 @@ interface VisualizerToggleProps {
 }
 
 export function VisualizerToggle({ mode, onModeChange }: VisualizerToggleProps) {
-    const modes: Array<{ value: VisualizerMode; icon: React.ComponentType<{ size: number }>; label: string }> = [
+    const modes: Array<{ value: VisualizerMode; icon: React.FC<any>; label: string }> = [
         { value: 'chladni', icon: Lightbulb, label: 'Chladni' },
         { value: 'water', icon: Waves, label: 'Water' },
         { value: 'sacred', icon: Sparkles, label: 'Sacred' },
@@ -374,37 +374,35 @@ export function VisualizerToggle({ mode, onModeChange }: VisualizerToggleProps) 
     ];
 
     return (
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 backdrop-blur-xl border border-white/10">
+        <div className="flex items-center gap-px bg-[var(--color-card)] border border-[var(--color-border)] p-1 backdrop-blur-md">
             {modes.map(({ value, icon: Icon, label }) => (
                 <button
                     key={value}
                     onClick={() => onModeChange(value)}
-                    className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all ${mode === value
-                        ? 'bg-[#c9a962] text-[#0a0a0a]'
-                        : 'text-[#fafaf5]/60 hover:text-[#fafaf5] hover:bg-white/5'
-                        }`}
+                    className={`
+                        relative group flex items-center justify-center gap-2 px-4 py-2 
+                        transition-all duration-300 border border-transparent
+                        ${mode === value
+                            ? 'bg-[var(--color-accent-gold)]/10 border-[var(--color-accent-gold)] text-[var(--color-accent-gold)]'
+                            : 'hover:bg-[var(--color-card-hover)] hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                        }
+                    `}
                     title={label}
                 >
-                    <Icon size={13} />
-                    <span className="text-xs font-medium">{label}</span>
+                    {/* Active Corner Markers */}
+                    {mode === value && (
+                        <>
+                            <span className="absolute top-0 left-0 w-1 h-1 bg-[var(--color-accent-gold)]" />
+                            <span className="absolute bottom-0 right-0 w-1 h-1 bg-[var(--color-accent-gold)]" />
+                        </>
+                    )}
+
+                    <Icon size={14} className={mode === value ? 'animate-pulse' : ''} />
+                    <span className="hidden sm:block font-mono text-[10px] uppercase tracking-widest leading-none pt-0.5">
+                        {label}
+                    </span>
                 </button>
             ))}
-
-            <div className="sm:hidden flex items-center gap-1">
-                {modes.map(({ value, icon: Icon, label }) => (
-                    <button
-                        key={value}
-                        onClick={() => onModeChange(value)}
-                        className={`w-7 h-7 flex items-center justify-center rounded-full transition-all ${mode === value
-                            ? 'bg-[#c9a962] text-[#0a0a0a]'
-                            : 'text-[#fafaf5]/60 hover:text-[#fafaf5] hover:bg-white/5'
-                            }`}
-                        title={label}
-                    >
-                        <Icon size={13} />
-                    </button>
-                ))}
-            </div>
         </div>
     );
 }

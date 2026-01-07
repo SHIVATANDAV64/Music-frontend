@@ -64,61 +64,61 @@ export function MusicCard({ track }: MusicCardProps) {
 
     return (
         <div
-            className="group p-4 rounded-2xl bg-secondary border border-theme cursor-pointer transition-all duration-500 hover:bg-hover hover:border-accent/20"
+            className="group relative p-3 rounded-none border border-[var(--color-border)] bg-[var(--color-glass)] backdrop-blur-sm cursor-pointer transition-all duration-300 hover:border-[var(--color-accent-gold)]/50 hover:shadow-[0_0_20px_rgba(212,175,55,0.1)]"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => play(track)}
-            style={{
-                transform: isHovered ? 'translateY(-4px)' : 'none',
-            }}
         >
-            {/* Album Art - responsive container */}
-            <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-2xl group/art">
+            {/* Hover Scanline Effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--color-accent-gold)]/5 to-transparent opacity-0 group-hover:opacity-100 translate-y-[-100%] group-hover:translate-y-[100%] transition-all duration-1000 pointer-events-none z-0" />
+
+            {/* Album Art - Tech container */}
+            <div className="relative aspect-square overflow-hidden mb-3 border border-[var(--color-border)] group-hover:border-[var(--color-accent-gold)]/30 transition-colors z-10">
                 {coverUrl ? (
                     <img
                         src={coverUrl}
                         alt={track.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         loading="lazy"
                     />
                 ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)] flex items-center justify-center">
-                        <span className="text-4xl opacity-30">🎵</span>
+                    <div className="w-full h-full bg-[var(--color-card)] flex items-center justify-center">
+                        <span className="text-2xl opacity-20 font-mono tracking-widest text-[var(--color-text-muted)]">NULL</span>
                     </div>
                 )}
 
-                {/* Overlays - Improved Visibility */}
-                <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 flex items-center justify-center gap-3 ${isHovered || isPlayingThis ? 'opacity-100' : 'opacity-0'}`}>
+                {/* Overlays - Precision Controls */}
+                <div className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 flex items-center justify-center gap-2 ${isHovered || isPlayingThis ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         onClick={handleFavoriteClick}
                         disabled={isAddingFavorite}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border ${isFavorite
-                            ? 'bg-[var(--gold)] border-[var(--gold)] text-black'
-                            : 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-110'
+                        className={`w-8 h-8 flex items-center justify-center transition-colors border ${isFavorite
+                            ? 'bg-[var(--color-accent-gold)] border-[var(--color-accent-gold)] text-[var(--color-accent-primary)]'
+                            : 'bg-transparent border-[var(--color-border)] text-white hover:border-[var(--color-accent-gold)] hover:text-[var(--color-accent-gold)]'
                             }`}
                         title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                        <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} className={isAddingFavorite ? 'animate-pulse' : ''} />
+                        <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} className={isAddingFavorite ? 'animate-pulse' : ''} />
                     </button>
 
                     <button
                         onClick={handlePlayClick}
-                        className="w-14 h-14 rounded-full bg-[var(--gold)] text-black flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
+                        className="w-12 h-12 border border-[var(--color-accent-gold)] text-[var(--color-accent-gold)] flex items-center justify-center hover:bg-[var(--color-accent-gold)] hover:text-[var(--color-accent-primary)] transition-all duration-300"
                         title="Play"
                     >
                         {isPlayingThis ? (
-                            <Pause size={24} fill="currentColor" />
+                            <Pause size={20} fill="currentColor" />
                         ) : (
-                            <Play size={24} fill="currentColor" className="ml-1" />
+                            <Play size={20} fill="currentColor" className="ml-1" />
                         )}
                     </button>
 
                     <button
                         onClick={handleAddToQueue}
-                        className="w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center backdrop-blur-md hover:bg-white/20 hover:scale-110 transition-all"
+                        className="w-8 h-8 border border-[var(--color-border)] text-white flex items-center justify-center hover:border-[var(--color-accent-gold)] hover:text-[var(--color-accent-gold)] transition-colors"
                         title="Add to queue"
                     >
-                        <Plus size={18} />
+                        <Plus size={16} />
                     </button>
 
                     <button
@@ -126,10 +126,10 @@ export function MusicCard({ track }: MusicCardProps) {
                             e.stopPropagation();
                             setShowPlaylistSelector(true);
                         }}
-                        className="w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center backdrop-blur-md hover:bg-white/20 hover:scale-110 transition-all"
+                        className="w-8 h-8 border border-[var(--color-border)] text-white flex items-center justify-center hover:border-[var(--color-accent-gold)] hover:text-[var(--color-accent-gold)] transition-colors"
                         title="Add to playlist"
                     >
-                        <ListPlus size={18} />
+                        <ListPlus size={16} />
                     </button>
                 </div>
 
@@ -142,23 +142,26 @@ export function MusicCard({ track }: MusicCardProps) {
 
                 {/* Mobile/Compact indicator for currently playing */}
                 {isPlayingThis && (
-                    <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[var(--gold)] flex items-center justify-center text-black shadow-lg animate-pulse md:hidden">
-                        <Pause size={14} fill="currentColor" />
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-[var(--color-accent-gold)] flex items-center justify-center text-[var(--color-accent-primary)] animate-pulse md:hidden">
+                        <Pause size={12} fill="currentColor" />
                     </div>
                 )}
             </div>
 
-            <div className="space-y-1 px-1">
-                <h3 className={`font-bold text-base truncate transition-colors ${isCurrentTrack ? 'text-accent' : 'text-primary group-hover:text-accent'}`}>
+            <div className="space-y-1 relative z-10">
+                <h3 className={`font-display font-medium text-sm truncate tracking-wide transition-colors ${isCurrentTrack ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-gold)]'}`}>
                     {track.title}
                 </h3>
-                <p className="text-sm font-medium text-secondary group-hover:text-primary transition-colors truncate">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors truncate">
                     {track.artist}
                 </p>
                 {track.source === 'jamendo' && (
-                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded border border-theme mt-1">
-                        Jamendo
-                    </span>
+                    <div className="flex items-center gap-1 mt-1">
+                        <span className="w-1 h-1 bg-[var(--color-accent-gold)] rounded-full"></span>
+                        <span className="font-mono text-[8px] text-[var(--color-accent-gold)]/60 uppercase tracking-widest">
+                            EXT_SRC
+                        </span>
+                    </div>
                 )}
             </div>
         </div>

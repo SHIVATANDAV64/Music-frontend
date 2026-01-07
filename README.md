@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# AUDIO_OS
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### High-Fidelity Audio Architecture // Technical Discovery Terminal
 
-Currently, two official plugins are available:
+**AUDIO_OS** is a precision-engineered music streaming platform designed for audiophiles who value both discovery and personal curation. Built with a "Mechanical Chaos" aesthetic, it bridges the gap between massive global catalogs and private, high-fidelity libraries.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ─── Core Architecture
 
-## React Compiler
+- **Engine**: React 19 + TypeScript + Vite
+- **Discovery**: Jamendo Hyper-Stream Protocol (Access to 600k+ Tracks)
+- **Persistence**: Appwrite Private Cloud Node (Secure personal uploads & data indexing)
+- **Visuals**: Real-time FFT Processing & Canvas-based Mathematical Art
+- **Design**: Localized dark-mode isolation for Landing/Auth; System-wide "Peach White" ascetic theme.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## ─── Key Modules
 
-## Expanding the ESLint configuration
+### 01 — THE VOID (Landing)
+A high-impact, dark-themed entrance using `MathPeacock` visualizers to demonstrate the intersection of mathematics and sound.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 02 — AUDIO BLUEPRINT (Dashboard)
+The primary interface for library management, featuring the `CymaticsVisualizer` and standard "Peach White" laboratory aesthetic.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 03 — INGESTION ENGINE (Admin)
+Secure terminal for uploading personal audio assets directly to private Appwrite buckets.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## ─── Technical Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Clone the terminal
+git clone <repository-url>
+
+# Initialize dependencies
+npm install
+
+# Start the system
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## ─── System Branding Standard
+All modules, metadata, and identity strings must adhere to the `AUDIO_OS` naming convention. 
+- **Package ID**: `audio-os`
+- **System Version**: 1.0.0
+- **Philosophy**: ASCII-sharp precision meets organic frequency.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+© 2026 AUDIO_OS INC. // INDIA

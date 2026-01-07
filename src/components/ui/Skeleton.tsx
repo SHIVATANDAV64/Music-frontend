@@ -1,10 +1,3 @@
-/**
- * Skeleton Components
- * Unified loading state components following Luxury design system
- * 
- * Philosophy: Loading states should feel elegant, not frustrating
- * Uses subtle shimmer animation with gold accent
- */
 import { motion } from 'framer-motion';
 
 interface SkeletonProps {
@@ -13,14 +6,17 @@ interface SkeletonProps {
 
 /**
  * SkeletonPulse - Base shimmer animation
+ * Adjusted to be a sharp, technical scan rather than organic pulse
  */
 export function SkeletonPulse({ className = '' }: SkeletonProps) {
     return (
-        <motion.div
-            className={`bg-[#1a1a1a] rounded ${className}`}
-            animate={{ opacity: [0.5, 0.8, 0.5] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-        />
+        <div className={`relative overflow-hidden bg-[#111] border border-[#222] ${className}`}>
+            <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-[#222] to-transparent"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+            />
+        </div>
     );
 }
 
@@ -29,8 +25,8 @@ export function SkeletonPulse({ className = '' }: SkeletonProps) {
  */
 export function SkeletonCard({ className = '' }: SkeletonProps) {
     return (
-        <div className={`p-5 rounded-2xl bg-[#111111] ${className}`}>
-            <SkeletonPulse className="aspect-square rounded-xl mb-4" />
+        <div className={`p-0 bg-transparent ${className}`}>
+            <SkeletonPulse className="aspect-square mb-4 border border-[#222]" />
             <SkeletonPulse className="h-4 w-3/4 mb-2" />
             <SkeletonPulse className="h-3 w-1/2" />
         </div>
@@ -42,13 +38,13 @@ export function SkeletonCard({ className = '' }: SkeletonProps) {
  */
 export function SkeletonRow({ className = '' }: SkeletonProps) {
     return (
-        <div className={`flex items-center gap-4 p-4 rounded-xl bg-[#111111] ${className}`}>
-            <SkeletonPulse className="w-12 h-12 rounded-lg flex-shrink-0" />
+        <div className={`flex items-center gap-4 p-4 border-b border-[#222] ${className}`}>
+            <SkeletonPulse className="w-10 h-10 flex-shrink-0" />
             <div className="flex-1">
                 <SkeletonPulse className="h-4 w-1/2 mb-2" />
                 <SkeletonPulse className="h-3 w-1/3" />
             </div>
-            <SkeletonPulse className="w-16 h-8 rounded-full" />
+            <SkeletonPulse className="w-16 h-4" />
         </div>
     );
 }
@@ -70,7 +66,10 @@ export function SkeletonAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
         lg: 'w-16 h-16',
     };
 
-    return <SkeletonPulse className={`${sizeClasses[size]} rounded-full`} />;
+    // Note: Kept rounded-full for avatar skeleton to match actual avatar shape, 
+    // but logic could be changed to square if we move to square avatars completely.
+    // For now, avatars are circular in many places.
+    return <SkeletonPulse className={`${sizeClasses[size]} rounded-full border border-[#222]`} />;
 }
 
 /**
