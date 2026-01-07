@@ -60,13 +60,9 @@ export const musicService = {
             ]);
 
             let tracks: Track[] = [];
+            const trackMap = new Map<string, Track>();
 
-            // Add Jamendo tracks
-            if (jamendoResponse.status === 'fulfilled' && jamendoResponse.value.headers.status === 'success') {
-                tracks = jamendoResponse.value.results.map(convertJamendoTrack);
-            }
-
-            // Add/Merge Appwrite tracks
+            // 1. Process Appwrite tracks (User uploads + Ingested Jamendo tracks)
             if (appwriteResponse.status === 'fulfilled') {
                 let uploaded: Track[] = [];
                 const res = appwriteResponse.value;
@@ -98,9 +94,28 @@ export const musicService = {
                     uploaded = uploaded.filter(t => t.genre === genre);
                 }
 
-                tracks = [...uploaded, ...tracks];
+                // Add to map - Appwrite source takes priority
+                uploaded.forEach(track => {
+                    trackMap.set(track.$id, track);
+                });
             }
 
+            // 2. Process Jamendo tracks (External API)
+            if (jamendoResponse.status === 'fulfilled' && jamendoResponse.value.headers.status === 'success') {
+                const jamendoTracks = jamendoResponse.value.results.map(convertJamendoTrack);
+
+                jamendoTracks.forEach(track => {
+                    // Only add if not already in map (prevents duplicates when a Jamendo track is already ingested)
+                    if (!trackMap.has(track.$id)) {
+                        trackMap.set(track.$id, track);
+                    }
+                });
+            }
+
+            // Convert map back to array
+            tracks = Array.from(trackMap.values());
+
+            // Final slice and return
             return tracks.slice(0, limit);
         } catch (error) {
             console.error('Music service error:', error);
@@ -136,6 +151,38 @@ export const musicService = {
         } catch (error) {
             console.error('Failed to get trending tracks:', error);
             throw error;
+        }
+    },
+
+    /**
+     * Get a single track by ID (hybrid)
+     */
+    async getTrack(itemId: string): Promise<Track | null> {
+        try {
+            // 1. Try Appwrite DB first (inflated metadata should be here if ingested)
+            try {
+                const track = await databases.getDocument(
+                    import.meta.env.VITE_DATABASE_ID,
+                    COLLECTIONS.TRACKS,
+                    itemId
+                );
+                // Determine source based on fields
+                const source = (track as any).audio_url ? 'jamendo' : 'appwrite';
+                return { ...track, source } as unknown as Track;
+            } catch (e: any) {
+                if (e.code !== 404) throw e;
+            }
+
+            // 2. Fallback to Jamendo API if not in our DB
+            const jamendoTrack = await import('./jamendoService').then(m => m.getTrackById(itemId));
+            if (jamendoTrack) {
+                return convertJamendoTrack(jamendoTrack);
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Failed to get track:', error);
+            return null;
         }
     },
 

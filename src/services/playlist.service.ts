@@ -128,6 +128,7 @@ export const playlistService = {
             playlistId,
             trackId: track.$id,
             trackSource: track.source,
+            metadata: track, // Send full metadata for ingestion
         });
 
         if (!response.success) {

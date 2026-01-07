@@ -154,6 +154,32 @@ export async function getTrendingTracks(limit = 20): Promise<JamendoTracksRespon
 }
 
 /**
+ * Get single track by ID
+ */
+export async function getTrackById(id: string): Promise<JamendoTrack | null> {
+    const params = new URLSearchParams({
+        client_id: JAMENDO_CLIENT_ID,
+        format: 'json',
+        id: id,
+        audioformat: 'mp32',
+    });
+
+    const url = `${JAMENDO_API_BASE}/tracks/?${params}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'MusicStreamingApp/1.0' },
+        });
+        if (!response.ok) throw new Error(`Jamendo API error: ${response.status}`);
+        const data = await response.json();
+        return data.results[0] || null;
+    } catch (error) {
+        console.error(`Failed to fetch Jamendo track ${id}:`, error);
+        return null;
+    }
+}
+
+/**
  * Get featured tracks by genre - great for discovery sections
  * Combines genre tags with featured flag for quality results
  */

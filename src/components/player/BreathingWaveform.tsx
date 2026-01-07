@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useAudioFrequency } from '../../context/AudioAnalyzerContext';
+import { useAudioAnalyzerContext } from '../../context/AudioAnalyzerContext';
 import { usePlayer } from '../../context/PlayerContext';
 
 interface BreathingWaveformProps {
@@ -29,25 +29,35 @@ export function BreathingWaveform({
     className = '',
 }: BreathingWaveformProps) {
     const { isPlaying, progress, duration, seek } = usePlayer();
+    const { analyzer, isInitialized } = useAudioAnalyzerContext();
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationFrameRef = useRef<number | null>(null);
     const isHoveringRef = useRef(false);
     const rippleRef = useRef<{ x: number; radius: number; opacity: number } | null>(null);
 
-    // Get shared frequency data from AudioAnalyzerContext (prevents duplicate MediaElementSource)
-    const frequencyData = useAudioFrequency();
+    // Stable refs for the animation loop to access without dependency changes
+    const progressRef = useRef(progress);
+    const durationRef = useRef(duration);
+    const isPlayingRef = useRef(isPlaying);
+    const waveformBufferRef = useRef<Uint8Array | null>(null);
+
+    useEffect(() => { progressRef.current = progress; }, [progress]);
+    useEffect(() => { durationRef.current = duration; }, [duration]);
+    useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
     // Handle click to seek
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
         const container = containerRef.current;
-        if (!container || !duration || !Number.isFinite(duration)) return;
+        const currentDuration = durationRef.current;
+        if (!container || !currentDuration || !Number.isFinite(currentDuration)) return;
 
         const rect = container.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const percent = Math.max(0, Math.min(1, x / rect.width));
-        const newTime = percent * duration;
+        const newTime = percent * currentDuration;
 
         seek(newTime);
 
@@ -71,10 +81,16 @@ export function BreathingWaveform({
     // Animation loop
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas || !analyzer || !isInitialized) return;
 
         const ctx = canvas.getContext('2d', { willReadFrequently: false });
         if (!ctx) return;
+
+        // Initialize internal buffer
+        if (!waveformBufferRef.current) {
+            waveformBufferRef.current = new Uint8Array(analyzer.frequencyBinCount);
+        }
+        const waveform = waveformBufferRef.current;
 
         // Set canvas resolution for crisp rendering
         const updateCanvasSize = () => {
@@ -97,18 +113,21 @@ export function BreathingWaveform({
         window.addEventListener('resize', updateCanvasSize);
 
         let lastTime = performance.now();
-        let frameCount = 0;
 
         const animate = (currentTime: number) => {
-            frameCount++;
             const deltaTime = Math.max(0, Math.min((currentTime - lastTime) / 16.67, 2));
             lastTime = currentTime;
 
-            // Skip frames if no audio is playing and no interaction
-            if (frameCount % 4 === 0 && frequencyData?.volume === 0 && !isHoveringRef.current && !rippleRef.current) {
-                window.requestAnimationFrame(animate);
-                return;
+            // 1. POLL DATA DIRECTLY
+            analyzer.getByteTimeDomainData(waveform as unknown as Uint8Array<ArrayBuffer>);
+
+            // Calculate simple volume for "breathing"
+            let sum = 0;
+            for (let i = 0; i < waveform.length; i++) {
+                const v = (waveform[i] / 128.0) - 1.0;
+                sum += v * v;
             }
+            const volume = Math.sqrt(sum / waveform.length);
 
             const width = canvas.width / (window.devicePixelRatio || 1);
             const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
@@ -116,16 +135,13 @@ export function BreathingWaveform({
             // Clear canvas
             ctx.clearRect(0, 0, width, canvasHeight);
 
-            // Get waveform data
-            const waveform = frequencyData?.waveform;
-            const volume = frequencyData?.volume ?? 0;
-            const bassEnergy = frequencyData?.bassEnergy ?? 0;
+            const currentIsPlaying = isPlayingRef.current;
 
             if (waveform && waveform.length > 0) {
                 // Draw waveform with optimization
                 const sliceWidth = width / waveform.length;
                 const centerY = canvasHeight / 2;
-                const breathScale = 1 + (volume * 0.2);
+                const breathScale = 1 + (volume * 1.5); // More breathing in waveform
 
                 ctx.beginPath();
                 ctx.strokeStyle = color;
@@ -147,11 +163,11 @@ export function BreathingWaveform({
 
                 ctx.stroke();
 
-                // Add glow effect when playing (less frequently)
-                if (isPlaying && bassEnergy > 0.3) {
-                    ctx.shadowBlur = 8 + (bassEnergy * 12);
+                // Add subtle glow when playing loud
+                if (currentIsPlaying && volume > 0.1) {
+                    ctx.shadowBlur = 4 + (volume * 10);
                     ctx.shadowColor = color;
-                    ctx.globalAlpha = 0.5;
+                    ctx.globalAlpha = 0.3;
                     ctx.stroke();
                     ctx.globalAlpha = 1;
                     ctx.shadowBlur = 0;
@@ -169,8 +185,11 @@ export function BreathingWaveform({
             }
 
             // Draw progress indicator
-            if (showProgress && duration > 0) {
-                const progressX = (progress / duration) * width;
+            const currentDuration = durationRef.current;
+            const currentProgress = progressRef.current;
+
+            if (showProgress && currentDuration > 0) {
+                const progressX = (currentProgress / currentDuration) * width;
 
                 // Progress line (lighter)
                 ctx.strokeStyle = color;
@@ -220,7 +239,7 @@ export function BreathingWaveform({
             }
             window.removeEventListener('resize', updateCanvasSize);
         };
-    }, [color, showProgress, isPlaying, frequencyData, progress, duration, height]);
+    }, [color, showProgress, analyzer, isInitialized, height]);
 
     return (
         <div

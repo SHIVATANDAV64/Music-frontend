@@ -25,7 +25,7 @@ export function Home() {
     const [podcasts, setPodcasts] = useState<Podcast[]>([]);
     const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('chladni');
+    const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred' | 'turing' | 'voronoi' | 'hopf'>('chladni');
     const heroRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

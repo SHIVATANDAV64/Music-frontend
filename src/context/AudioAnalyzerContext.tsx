@@ -28,7 +28,11 @@ export interface FrequencyData {
 
 interface AudioAnalyzerContextType {
     frequencyData: FrequencyData | null;
+    /** Get latest data without React state triggers (Zero allocation) */
+    getFrequencyData: () => FrequencyData | null;
     isInitialized: boolean;
+    /** Raw analyzer node for components that want to poll data manually for better performance */
+    analyzer: AnalyserNode | null;
     /** Manually trigger initialization (useful for user interaction requirement) */
     initialize: () => void;
 }
@@ -41,7 +45,10 @@ const SMOOTHING_TIME_CONSTANT = 0.8;
 export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
     const { audio, isPlaying } = usePlayer();
 
-    const [frequencyData, setFrequencyData] = useState<FrequencyData | null>(null);
+    // Use a Ref for frequencyData to allow components to read it without re-rendering
+    // We still keep the state version for components that WANT to react (like smaller UI elements)
+    const [frequencyDataState, setFrequencyDataState] = useState<FrequencyData | null>(null);
+    const frequencyDataRef = useRef<FrequencyData | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Singleton refs - only one AudioContext per app
@@ -115,10 +122,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
                     console.log('[AudioAnalyzerContext] Source connected successfully');
                 } catch (sourceError: any) {
                     if (sourceError.name === 'InvalidStateError') {
-                        console.warn('[AudioAnalyzerContext] Component re-mounted but audio is already connected. Attempting to recover state.');
-                        // We can't recreate the source, but we can't get the old one either if it wasn't global.
-                        // However, since AudioAnalyzerProvider is a singleton at the root, sourceRef.current 
-                        // should have persisted IF the provider didn't unmount.
+                        console.warn('[AudioAnalyzerContext] Recovery: Audio source already connected.');
                     } else {
                         throw sourceError;
                     }
@@ -140,10 +144,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
             });
         } catch (error) {
             console.error('[AudioAnalyzerContext] Failed to initialize:', error);
-            // Don't set connectionAttemptedRef to true on error, so we can retry if it wasn't a connection error
-            if (!(error instanceof Error && error.name === 'InvalidStateError')) {
-                connectionAttemptedRef.current = false;
-            }
+            connectionAttemptedRef.current = false;
         }
     };
 
@@ -154,7 +155,6 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
 
         // Reset connection flag if the audio element instance changed
         if ((audioElement as any)._lastInstance !== audioElement) {
-            console.log('[AudioAnalyzerContext] Detected fresh audio element, resetting connection state');
             sourceRef.current = null; // Recreate source node for the new element
             connectionAttemptedRef.current = false;
             (audioElement as any)._lastInstance = audioElement;
@@ -163,9 +163,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
 
         if (!connectionAttemptedRef.current && audioElement.src) {
             // Small delay to ensure audio element is fully ready
-            const timeoutId = setTimeout(() => {
-                initialize();
-            }, 100);
+            const timeoutId = setTimeout(initialize, 100);
             return () => clearTimeout(timeoutId);
         }
     }, [audio, audio.src]);
@@ -182,6 +180,16 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!isInitialized) return;
 
+        // Create a persistent wrapper object to avoid per-frame object allocation
+        const snapshot: FrequencyData = {
+            frequencies: frequenciesBufferRef.current!,
+            waveform: waveformBufferRef.current!,
+            bassEnergy: 0,
+            midEnergy: 0,
+            trebleEnergy: 0,
+            volume: 0,
+        };
+
         const analyze = () => {
             const analyzer = analyzerRef.current;
             const frequencies = frequenciesBufferRef.current;
@@ -192,49 +200,47 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // Get frequency data (type assertion needed for strict TypeScript)
+            // 1. In-place buffer update (Zero allocation)
             analyzer.getByteFrequencyData(frequencies as unknown as Uint8Array<ArrayBuffer>);
             analyzer.getByteTimeDomainData(waveform as unknown as Uint8Array<ArrayBuffer>);
 
-            // Calculate energy in different frequency ranges with more precision
-            // Standard audio bands:
-            // Bass: 20Hz - 250Hz
-            // Mids: 250Hz - 4000Hz
-            // Treble: 4000Hz+
-            // Each bin is approx 21.5Hz with FFT 2048
+            // 2. Efficient Energy Calculation
             const bassEnd = 12; // ~250Hz
             const midEnd = 186; // ~4000Hz
-
             let bassSum = 0, midSum = 0, trebleSum = 0, volumeSum = 0;
 
             for (let i = 0; i < frequencies.length; i++) {
                 const value = frequencies[i] / 255;
                 volumeSum += value;
-
-                if (i < bassEnd) {
-                    bassSum += value;
-                } else if (i < midEnd) {
-                    midSum += value;
-                } else {
-                    trebleSum += value;
-                }
+                if (i < bassEnd) bassSum += value;
+                else if (i < midEnd) midSum += value;
+                else trebleSum += value;
             }
 
-            // Apply a slight boost to responsiveness
             const sensitivity = 1.2;
+            snapshot.bassEnergy = Math.min(1, (bassSum / (bassEnd || 1)) * sensitivity);
+            snapshot.midEnergy = Math.min(1, (midSum / ((midEnd - bassEnd) || 1)) * sensitivity);
+            snapshot.trebleEnergy = Math.min(1, (trebleSum / ((frequencies.length - midEnd) || 1)) * sensitivity);
+            snapshot.volume = Math.min(1, (volumeSum / (frequencies.length || 1)) * sensitivity);
 
-            setFrequencyData({
-                frequencies: frequencies.slice(),
-                waveform: waveform.slice(),
-                bassEnergy: Math.min(1, (bassSum / (bassEnd || 1)) * sensitivity),
-                midEnergy: Math.min(1, (midSum / ((midEnd - bassEnd) || 1)) * sensitivity),
-                trebleEnergy: Math.min(1, (trebleSum / ((frequencies.length - midEnd) || 1)) * sensitivity),
-                volume: Math.min(1, (volumeSum / (frequencies.length || 1)) * sensitivity),
-            });
+            // 3. Update Ref (Synchronous, zero-latency, zero-allocation)
+            frequencyDataRef.current = snapshot;
+
+            // 4. Throttled State Update (Reactive UI)
+            // We only allocate when we actually want to trigger a React render
+            if (frameCountRef.current % 4 === 0) {
+                setFrequencyDataState({
+                    ...snapshot,
+                    frequencies: new Uint8Array(frequencies), // Immutable snapshot for React
+                    waveform: new Uint8Array(waveform),
+                });
+            }
+            frameCountRef.current++;
 
             animationFrameRef.current = requestAnimationFrame(analyze);
         };
 
+        const frameCountRef = { current: 0 };
         analyze();
 
         return () => {
@@ -256,16 +262,21 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
     }, []);
 
     return (
-        <AudioAnalyzerContext.Provider value={{ frequencyData, isInitialized, initialize }}>
+        <AudioAnalyzerContext.Provider value={{
+            frequencyData: frequencyDataState,
+            getFrequencyData: () => frequencyDataRef.current,
+            analyzer: analyzerRef.current,
+            isInitialized,
+            initialize
+        }}>
             {children}
         </AudioAnalyzerContext.Provider>
     );
 }
 
 /**
- * Hook to access shared audio frequency data
- * 
- * Use this instead of useAudioAnalyzer to avoid duplicate MediaElementSource creation
+ * Hook to access shared audio frequency data (Reactive version)
+ * Causes re-renders at ~15fps. Good for small bars, basic UI.
  */
 export function useAudioFrequency(): FrequencyData | null {
     const context = useContext(AudioAnalyzerContext);

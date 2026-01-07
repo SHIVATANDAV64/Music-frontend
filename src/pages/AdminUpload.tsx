@@ -151,7 +151,9 @@ export function AdminUpload() {
                         genre: trackForm.genre || null,
                         duration: trackForm.duration || 0,
                         audioFileId: audioUpload.$id,
+                        audioFilename: audioFile.name,
                         coverImageId: coverImageId,
+                        coverFilename: coverFile?.name || null,
                     },
                 });
                 if (!result.success) {

@@ -47,7 +47,7 @@ export function AudioPlayer() {
         toggleFullscreen,
     } = usePlayer();
 
-    const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred'>('chladni');
+    const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred' | 'turing' | 'voronoi' | 'hopf'>('chladni');
     const [showQueue, setShowQueue] = useState(false);
 
     // Resize Logic

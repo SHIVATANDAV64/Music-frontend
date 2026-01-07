@@ -8,6 +8,7 @@ import { History as HistoryIcon, Clock } from 'lucide-react';
 import { historyService, type RecentlyPlayedItem } from '../services/history.service';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackCoverUrl } from '../utils/trackUtils';
+import { musicService } from '../services/musicService';
 
 export default function History() {
     const { play } = usePlayer();
@@ -18,6 +19,7 @@ export default function History() {
         async function loadHistory() {
             try {
                 const history = await historyService.getRecentlyPlayed(50);
+                console.log('[History Page] Fetched history:', history);
                 setHistoryItems(history);
             } catch (err) {
                 console.error('Failed to load history:', err);
@@ -90,14 +92,21 @@ export default function History() {
                         return (
                             <div
                                 key={`${item.$id}-${idx}`}
-                                onClick={() => track && play(track)}
+                                onClick={async () => {
+                                    if (track) {
+                                        play(track);
+                                    } else if (item.track_id) {
+                                        const fullTrack = await musicService.getTrack(item.track_id);
+                                        if (fullTrack) play(fullTrack);
+                                    }
+                                }}
                                 className="group flex items-center gap-6 p-4 rounded-2xl cursor-pointer transition-all hover:bg-white/10 active:scale-[0.98] border border-transparent hover:border-white/10"
                             >
                                 {/* Art */}
                                 <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 shadow-xl">
-                                    {track ? (
+                                    {track && getTrackCoverUrl(track, 120, 120) ? (
                                         <img
-                                            src={getTrackCoverUrl(track, 120, 120) || ''}
+                                            src={getTrackCoverUrl(track, 120, 120)!}
                                             alt=""
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                         />

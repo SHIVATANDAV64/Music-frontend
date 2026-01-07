@@ -106,6 +106,7 @@ export interface PlaylistParams {
     trackId?: string;
     trackSource?: 'jamendo' | 'appwrite';
     position?: number;
+    metadata?: any;
 }
 
 export function managePlaylists<T>(params: PlaylistParams) {

@@ -42,7 +42,9 @@ export interface Track extends AppwriteDocument {
 
     // For Appwrite tracks (user uploads)
     audio_file_id?: string;   // Appwrite Storage ID
+    audio_filename?: string;  // Descriptive filename
     cover_image_id?: string;  // Appwrite Storage ID
+    cover_filename?: string;  // Descriptive filename
 }
 
 // Podcast show

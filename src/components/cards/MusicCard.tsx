@@ -74,12 +74,18 @@ export function MusicCard({ track }: MusicCardProps) {
         >
             {/* Album Art - responsive container */}
             <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-2xl group/art">
-                <img
-                    src={coverUrl || ''}
-                    alt={track.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                />
+                {coverUrl ? (
+                    <img
+                        src={coverUrl}
+                        alt={track.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)] flex items-center justify-center">
+                        <span className="text-4xl opacity-30">🎵</span>
+                    </div>
+                )}
 
                 {/* Overlays - Improved Visibility */}
                 <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 flex items-center justify-center gap-3 ${isHovered || isPlayingThis ? 'opacity-100' : 'opacity-0'}`}>
