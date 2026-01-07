@@ -228,7 +228,8 @@ export const musicService = {
                 if (execution.status === 'completed' && execution.responseBody) {
                     const result = JSON.parse(execution.responseBody);
                     if (result.success && Array.isArray(result.data)) {
-                        return result.data as Track[];
+                        // FILTER: Only show true uploads (no jamendo_id)
+                        return (result.data as Track[]).filter(t => !t.jamendo_id);
                     }
                 }
             }
@@ -242,6 +243,7 @@ export const musicService = {
             COLLECTIONS.TRACKS,
             [
                 Query.isNotNull('audio_file_id'),
+                Query.isNull('jamendo_id'), // Only manual uploads
                 Query.orderDesc('$createdAt')
             ]
         );

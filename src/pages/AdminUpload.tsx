@@ -11,6 +11,7 @@ import { adminUpload } from '../lib/functions';
 import { musicService } from '../services/musicService';
 import { usePlayer } from '../context/PlayerContext';
 import { Trash2, Play } from 'lucide-react';
+import { getTrackCoverUrl } from '../utils/trackUtils';
 import type { Track } from '../types';
 
 type ContentType = 'track' | 'podcast';
@@ -474,9 +475,9 @@ export function AdminUpload() {
                             <div key={track.$id} className="glass p-4 rounded-xl flex items-center gap-4 hover:bg-white/5 transition-colors group">
                                 {/* Track Image */}
                                 <div className="w-12 h-12 rounded-lg bg-white/10 overflow-hidden relative flex-shrink-0">
-                                    {track.cover_image_id || track.cover_url ? (
+                                    {getTrackCoverUrl(track) ? (
                                         <img
-                                            src={storage.getFileView(BUCKETS.COVERS, track.cover_image_id!) || track.cover_url}
+                                            src={getTrackCoverUrl(track)!}
                                             alt={track.title}
                                             className="w-full h-full object-cover"
                                         />

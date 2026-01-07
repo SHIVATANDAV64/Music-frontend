@@ -8,12 +8,13 @@ import { useState } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Shuffle, Repeat, Repeat1, Volume2, VolumeX,
-    Maximize2, ListMusic
+    Maximize2, ListMusic, Plus
 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { VisualizerToggle } from '../ui/CymaticsVisualizer';
 import { BreathingWaveform } from './BreathingWaveform';
 import { QueuePanel } from './QueuePanel';
+import { PlaylistSelector } from './PlaylistSelector';
 import { useRef, useEffect } from 'react';
 import type { Track, Episode } from '../../types';
 
@@ -49,15 +50,15 @@ export function AudioPlayer() {
 
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred' | 'turing' | 'voronoi' | 'hopf'>('chladni');
     const [showQueue, setShowQueue] = useState(false);
+    const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
 
     // Resize Logic
     const [width, setWidth] = useState<number>(Math.min(1024, window.innerWidth - 32));
-    const [height, setHeight] = useState<number>(96); // Default connected to current design approx height
-    const resizingDirection = useRef<'horizontal' | 'vertical' | null>(null);
+    const [height] = useState<number>(96); // Fixed height to prevent vertical movement confusion
+    const resizingDirection = useRef<'horizontal' | null>(null);
     const startX = useRef(0);
     const startY = useRef(0);
     const startWidth = useRef(0);
-    const startHeight = useRef(0);
     const playerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -68,11 +69,6 @@ export function AudioPlayer() {
                 const delta = (e.clientX - startX.current) * 2;
                 const newWidth = Math.max(320, Math.min(window.innerWidth - 32, startWidth.current + delta));
                 setWidth(newWidth);
-            } else if (resizingDirection.current === 'vertical') {
-                // Dragging up (negative clientY delta) increases height
-                const delta = startY.current - e.clientY;
-                const newHeight = Math.max(96, Math.min(800, startHeight.current + delta));
-                setHeight(newHeight);
             }
         }
 
@@ -90,7 +86,7 @@ export function AudioPlayer() {
         };
     }, []);
 
-    const handleResizeStart = (e: React.MouseEvent, direction: 'horizontal' | 'vertical') => {
+    const handleResizeStart = (e: React.MouseEvent, direction: 'horizontal') => {
         e.preventDefault();
         e.stopPropagation();
         resizingDirection.current = direction;
@@ -98,9 +94,8 @@ export function AudioPlayer() {
         startX.current = e.clientX;
         startY.current = e.clientY;
         startWidth.current = width;
-        startHeight.current = height;
 
-        document.body.style.cursor = direction === 'horizontal' ? 'ew-resize' : 'ns-resize';
+        document.body.style.cursor = 'ew-resize';
         document.body.style.userSelect = 'none';
     };
 
@@ -138,15 +133,6 @@ export function AudioPlayer() {
                         className="absolute left-0 top-0 bottom-0 w-4 cursor-ew-resize z-50 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-center group/handle"
                     >
                         <div className="w-1 h-8 rounded-full bg-white/10 group-hover/handle:bg-white/30 transition-colors" />
-                    </div>
-
-                    {/* Resize Handle (Top Edge) */}
-                    <div
-                        onMouseDown={(e) => handleResizeStart(e, 'vertical')}
-                        className="absolute left-4 right-4 top-0 h-4 cursor-ns-resize z-50 hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-center group/handle"
-                        title="Drag to resize height"
-                    >
-                        <div className="w-8 h-1 rounded-full bg-white/10 group-hover/handle:bg-white/30 transition-colors" />
                     </div>
 
                     {/* Background Texture Overlay */}
@@ -257,6 +243,15 @@ export function AudioPlayer() {
                                 <Maximize2 size={18} />
                             </button>
 
+                            {/* Add to Playlist */}
+                            <button
+                                onClick={() => setShowPlaylistSelector(true)}
+                                className="p-2 text-[#999] hover:text-[#d4af37] transition-colors"
+                                title="Add to Playlist"
+                            >
+                                <Plus size={18} />
+                            </button>
+
                             {/* Queue Toggle */}
                             <button
                                 onClick={() => setShowQueue(!showQueue)}
@@ -301,6 +296,13 @@ export function AudioPlayer() {
 
             {/* Queue Panel */}
             <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
+
+            {/* Playlist Selector */}
+            <PlaylistSelector
+                isOpen={showPlaylistSelector}
+                onClose={() => setShowPlaylistSelector(false)}
+                track={currentTrack as Track}
+            />
         </>
     );
 }

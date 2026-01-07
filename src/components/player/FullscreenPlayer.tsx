@@ -6,7 +6,7 @@
  * Text is elegant and unobtrusive.
  */
 import { useState, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Minimize2, Heart, ListMusic, Volume2, Volume1, VolumeX, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Minimize2, Heart, ListMusic, Volume2, Volume1, VolumeX, Eye, EyeOff, Plus } from 'lucide-react';
 import { extractDominantColor } from '../../utils/colorExtractor';
 // import { getLyrics, type LyricsResult } from '../../services/lyrics.service';
 import { CymaticsVisualizer, VisualizerToggle } from '../ui/CymaticsVisualizer';
@@ -15,7 +15,9 @@ import { BreathingWaveform } from './BreathingWaveform';
 import { favoritesService } from '../../services/favorites.service';
 import { useAuth } from '../../context/AuthContext';
 import { QueuePanel } from './QueuePanel';
+import { PlaylistSelector } from './PlaylistSelector';
 import { useRef } from 'react';
+import type { Track } from '../../types';
 
 interface FullscreenPlayerProps {
     trackName: string | null;
@@ -54,6 +56,7 @@ export function FullscreenPlayer({
     const [isAddingFavorite, setIsAddingFavorite] = useState(false);
     const [showQueue, setShowQueue] = useState(false);
     const [showUI, setShowUI] = useState(true);
+    const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
 
     // Resize Logic
     const [width, setWidth] = useState<number>(768); // Default max-w-3xl approx
@@ -366,6 +369,15 @@ export function FullscreenPlayer({
                                 <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
                             </button>
 
+                            {/* Add to Playlist */}
+                            <button
+                                onClick={() => setShowPlaylistSelector(true)}
+                                className="p-2 text-white/40 hover:text-[#d4af37] transition-colors"
+                                title="Add to playlist"
+                            >
+                                <Plus size={18} />
+                            </button>
+
                             {/* Queue */}
                             <button
                                 onClick={() => setShowQueue(!showQueue)}
@@ -423,6 +435,13 @@ export function FullscreenPlayer({
 
             {/* Queue Panel */}
             <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
+
+            {/* Playlist Selector */}
+            <PlaylistSelector
+                isOpen={showPlaylistSelector}
+                onClose={() => setShowPlaylistSelector(false)}
+                track={currentTrack as Track}
+            />
 
         </div>
     );
