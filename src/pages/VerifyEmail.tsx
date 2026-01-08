@@ -6,7 +6,7 @@ import { MagneticButton } from '../components/ui/MagneticButton';
 import { Mail, CheckCircle, XCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export function VerifyEmail() {
-    const { user, sendEmailVerification, confirmEmailVerification } = useAuth();
+    const { user, sendEmailVerification, confirmEmailVerification, logout } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error' | 'sent'>('idle');
@@ -57,6 +57,15 @@ export function VerifyEmail() {
         } catch (err: any) {
             setStatus('error');
             setMessage(err.message || 'Failed to resend verification email.');
+        }
+    };
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/login');
+        } catch (err) {
+            console.error('Logout error:', err);
+            navigate('/login'); // Fallback navigate anyway
         }
     };
 
@@ -149,7 +158,7 @@ export function VerifyEmail() {
                     </MagneticButton>
 
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={handleLogout}
                         className="text-[10px] uppercase tracking-widest font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-center"
                     >
                         LOGOUT AND RETURN
