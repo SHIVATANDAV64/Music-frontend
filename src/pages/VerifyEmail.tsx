@@ -6,7 +6,7 @@ import { MagneticButton } from '../components/ui/MagneticButton';
 import { Mail, CheckCircle, XCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export function VerifyEmail() {
-    const { user, sendEmailVerification, confirmEmailVerification, isLoading } = useAuth();
+    const { user, sendEmailVerification, confirmEmailVerification } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error' | 'sent'>('idle');
@@ -31,19 +31,17 @@ export function VerifyEmail() {
         }
     }, [userId, secret]);
 
-    // Redirect if already verified
-    useEffect(() => {
-        if (!isLoading && user?.is_verified && status !== 'success') {
-            navigate('/home');
-        }
-    }, [user, isLoading, navigate, status]);
 
     const handleConfirmVerification = async (uid: string, sec: string) => {
         setStatus('verifying');
         try {
             await confirmEmailVerification(uid, sec);
             setStatus('success');
-            setTimeout(() => navigate('/login?verified=true'), 3000);
+
+            // If already authenticated on this device, go home. 
+            // Otherwise, go to login to show the success message.
+            const destination = user ? '/home' : '/login?verified=true';
+            setTimeout(() => navigate(destination), 3000);
         } catch (err: any) {
             setStatus('error');
             setMessage(err.message || 'Verification failed. The link may have expired.');

@@ -152,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
             // 1. Clear any existing session first to prevent session conflict errors
-            console.log('[Auth] Starting registration, clearing existing sessions...');
             try {
                 await account.deleteSession('current');
             } catch {
@@ -160,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // 2. Create account
-            console.log('[Auth] Creating Appwrite account...');
             const newAccount = await account.create(ID.unique(), email, password, username);
             if (!newAccount || !newAccount.$id) {
                 throw new Error('Account creation failed - no ID returned');
@@ -168,7 +166,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             tempAccountId = newAccount.$id;
 
             // 3. Create session immediately (required for subsequent authenticated calls like verification)
-            console.log('[Auth] Creating initial session...');
             await account.createEmailPasswordSession(email, password);
 
             // 4. Create user profile in database - STRICT REQUIREMENT
@@ -176,7 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('Database configuration missing');
             }
 
-            console.log('[Auth] Creating database profile...');
             try {
                 await databases.createDocument(
                     DATABASE_ID,
@@ -195,7 +191,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // 5. Send verification email immediately
-            console.log('[Auth] Sending initial verification email...');
             try {
                 await sendEmailVerification();
             } catch (verifyError) {
@@ -204,7 +199,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // 6. Finalize state
-            console.log('[Auth] Registration complete, fetching profile...');
             await fetchUserProfile(newAccount.$id);
 
         } catch (error: any) {
@@ -305,7 +299,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const platformUrl = 'https://audioos.appwrite.network';
         const resetUrl = `${platformUrl}/reset-password/`;
-        console.log('[Auth] Generated reset URL:', resetUrl);
         await account.createRecovery(email, resetUrl);
     }
 
@@ -324,7 +317,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function sendEmailVerification() {
         const platformUrl = 'https://audioos.appwrite.network';
         const verifyUrl = `${platformUrl}/verify-email/`;
-        console.log('[Auth] Generated verification URL:', verifyUrl);
 
         // STRICT SECURITY: Fetch fresh user data from DB to prevent state manipulation/stale data
         try {
