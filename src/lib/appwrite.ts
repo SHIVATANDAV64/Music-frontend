@@ -102,13 +102,36 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
     // Start the fetch
     const fetchPromise = (async () => {
         try {
+            // OPTIMIZATION: If the URL is already from our Appwrite instance, skip the proxy function!
+            // This avoids "Unauthorized domain" errors when proxying our own files.
+            const appwriteEndpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
+            const isInternalAppwrite = originalUrl.includes(appwriteEndpoint || 'appwrite.io') ||
+                originalUrl.includes('cloud.appwrite.io') ||
+                originalUrl.includes('audioos.appwrite.network');
+
+            if (isInternalAppwrite) {
+                // Determine if we need to fetch as blob (for visualization) or just return URL
+                // For visualization to work with CORS, we often need a blob URL even for same-origin if headers are strict
+                // But for Appwrite, we can try direct fetch first.
+
+                try {
+                    const response = await fetch(originalUrl);
+                    if (!response.ok) throw new Error(`Internal fetch failed: ${response.status}`);
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    audioProxyCache.set(originalUrl, blobUrl);
+                    return blobUrl;
+                } catch (e) {
+                    console.warn('[AudioProxy] Internal blob fetch failed, falling back to original URL', e);
+                    return originalUrl;
+                }
+            }
+
             const functionId = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
             if (!functionId) {
                 console.warn('[AudioProxy] Function ID missing, falling back to original');
                 return originalUrl;
             }
-
-
 
             const execution = await functions.createExecution(
                 functionId,
@@ -129,8 +152,6 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
 
             // Generate a Storage View URL
             const storageUrl = storage.getFileView(BUCKETS.AUDIO, result.fileId).toString();
-
-
 
             // Convert to real Blob URL for perfect seeking & visualization
             const response = await fetch(storageUrl);
@@ -185,8 +206,6 @@ export async function fetchStorageAudioBlob(fileId: string): Promise<string> {
         try {
             // Generate a Storage View URL
             const storageUrl = storage.getFileView(BUCKETS.AUDIO, fileId).toString();
-
-
 
             // Convert to real Blob URL for perfect seeking & visualization
             const response = await fetch(storageUrl);
