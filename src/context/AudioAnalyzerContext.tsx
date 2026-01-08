@@ -69,9 +69,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
         // If already connected successfully, don't try again
         if (connectionAttemptedRef.current && isInitialized) return;
 
-        // Check if audio element has a valid source
         if (!audioElement.src) {
-            console.warn('[AudioAnalyzerContext] Audio element has no source yet');
             return;
         }
 
@@ -86,7 +84,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
         const isBlob = audioElement.src.startsWith('blob:');
 
         if (isExternal && !isAppwrite && !isBlob) {
-            console.log('[AudioAnalyzerContext] Skipping initialization for direct Jamendo URL to prevent silence.');
+
             return;
         }
 
@@ -119,10 +117,10 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
                     // Connect: source → analyzer → destination (speakers)
                     source.connect(analyzer);
                     analyzer.connect(audioContext.destination);
-                    console.log('[AudioAnalyzerContext] Source connected successfully');
+
                 } catch (sourceError: any) {
                     if (sourceError.name === 'InvalidStateError') {
-                        console.warn('[AudioAnalyzerContext] Recovery: Audio source already connected.');
+                        // Recovery: Audio source already connected.
                     } else {
                         throw sourceError;
                     }
@@ -138,10 +136,7 @@ export function AudioAnalyzerProvider({ children }: { children: ReactNode }) {
 
             setIsInitialized(true);
 
-            console.log('[AudioAnalyzerContext] Initialized successfully', {
-                fftSize: analyzer.fftSize,
-                src: audioElement.src.substring(0, 30) + '...',
-            });
+
         } catch (error) {
             console.error('[AudioAnalyzerContext] Failed to initialize:', error);
             connectionAttemptedRef.current = false;

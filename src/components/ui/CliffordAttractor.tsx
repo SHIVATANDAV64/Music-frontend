@@ -16,7 +16,7 @@ export const CliffordAttractor = () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d', { alpha: false }); // Optimization: alpha false
+        const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) return;
 
         let width = canvas.offsetWidth;
@@ -32,8 +32,7 @@ export const CliffordAttractor = () => {
         let x = 0, y = 0;
         let time = 0;
 
-        // Parameters (Starting at a known beautiful configuration)
-        // Set A: -1.7, 1.3, -0.1, -1.2
+
         let a = -1.7;
         let b = 1.3;
         let c = -0.1;
@@ -50,7 +49,7 @@ export const CliffordAttractor = () => {
             canvas.width = width;
             canvas.height = height;
 
-            // Initial clear
+
             ctx.fillStyle = '#050508'; // bg-void
             ctx.fillRect(0, 0, width, height);
         };
@@ -119,9 +118,7 @@ export const CliffordAttractor = () => {
                 const plotX = centerX + x * SCALE;
                 const plotY = centerY + y * SCALE;
 
-                // Color variation based on position or iteration?
                 // For performance, static color is best, but let's try subtle variation
-                // ctx.fillStyle = `hsla(${200 + x * 20}, 70%, 60%, 0.03)`; // Too expensive to change context every pixel
 
                 ctx.fillRect(plotX, plotY, 1, 1);
             }
@@ -130,8 +127,7 @@ export const CliffordAttractor = () => {
             ctx.fillStyle = 'rgba(255, 200, 100, 0.03)'; // Faint Gold
             let gx = x, gy = y;
             for (let i = 0; i < ITERATIONS_PER_FRAME / 3; i++) {
-                // Slightly different parameters or just offset?
-                // Let's reuse equations but vary 'd' slightly for a "shadow" or "highlight" attractor
+
                 const gxn = Math.sin(a * gy) + c * Math.cos(a * gx);
                 const gyn = Math.sin(b * gx) + (d + 0.05) * Math.cos(b * gy);
                 gx = gxn;

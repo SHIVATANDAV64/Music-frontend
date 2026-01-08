@@ -20,7 +20,7 @@ export default function History() {
         async function loadHistory() {
             try {
                 const history = await historyService.getRecentlyPlayed(50);
-                console.log('[History Page] Fetched history:', history);
+
                 setHistoryItems(history);
             } catch (err) {
                 console.error('Failed to load history:', err);

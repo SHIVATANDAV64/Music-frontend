@@ -113,10 +113,10 @@ export function Playlists() {
 
     if (!isAuthenticated) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 border border-white/5 m-8 bg-white/[0.02]">
-                <ListMusic size={64} className="text-white/20 mb-4" />
-                <h2 className="text-2xl font-display uppercase tracking-widest text-white mb-2">Access Denied</h2>
-                <p className="font-mono text-xs text-white/50 uppercase">
+            <div className="flex flex-col items-center justify-center py-20 border border-[var(--color-border)] m-8 bg-[var(--color-void)]/50">
+                <ListMusic size={64} className="text-[var(--color-text-muted)]/20 mb-4" />
+                <h2 className="text-2xl font-display uppercase tracking-widest text-[var(--color-text-primary)] mb-2">Access Denied</h2>
+                <p className="font-mono text-xs text-[var(--color-text-muted)] uppercase">
                     Authentication Protocol Required for Access.
                 </p>
             </div>
@@ -307,7 +307,7 @@ export function Playlists() {
                                 <div className="flex gap-4 pt-2">
                                     <button
                                         onClick={() => setShowCreateModal(false)}
-                                        className="flex-1 py-3 border border-white/10 text-white/60 font-mono text-xs uppercase tracking-widest hover:bg-white/5 hover:text-white transition-colors"
+                                        className="flex-1 py-3 border border-[var(--color-border)] text-[var(--color-text-muted)] font-mono text-xs uppercase tracking-widest hover:bg-[var(--color-void)] hover:text-[var(--color-text-primary)] transition-colors"
                                     >
                                         Abort
                                     </button>

@@ -18,9 +18,9 @@ export interface LyricsResult {
  * Get lyrics for a track
  * Currently returns null - lyrics API integration needed
  */
-export async function getLyrics(trackName: string, artistName: string): Promise<LyricsResult | null> {
+export async function getLyrics(_trackName: string, _artistName: string): Promise<LyricsResult | null> {
     // TODO: Integrate with a lyrics API like LRCLIB, Genius, or Musixmatch
-    console.log(`Lyrics requested for: ${trackName} by ${artistName}`);
+
 
     // Return null to indicate no lyrics found
     return null;

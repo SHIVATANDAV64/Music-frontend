@@ -38,19 +38,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         } catch (error) {
             // No active session or session expired
-            console.log('No active session');
             setState({ user: null, isLoading: false, isAuthenticated: false });
         }
     }
 
     async function fetchUserProfile(userId: string) {
-        console.log('[Auth] fetchUserProfile started for:', userId);
         try {
             // Fetch session labels to determine admin status (Priority over DB)
             const session = await account.get();
             const hasAdminLabel = session.labels?.includes('admin') || false;
 
-            console.log('[Auth] Getting document from:', DATABASE_ID, COLLECTIONS.USERS, userId);
             const profile = await databases.getDocument(
                 DATABASE_ID,
                 COLLECTIONS.USERS,
@@ -60,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Sync admin status if label exists but DB flag is false
             let finalProfile = profile;
             if (hasAdminLabel && !profile.is_admin) {
-                console.log('[Auth] Syncing Admin Label: Updating DB is_admin to true');
                 try {
                     finalProfile = await databases.updateDocument(
                         DATABASE_ID,
@@ -74,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             }
 
-            console.log('[Auth] fetchUserProfile success:', finalProfile);
             setState({
                 user: finalProfile,
                 isLoading: false,
@@ -87,9 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Try to recover by creating the profile if the session exists
             try {
                 const session = await account.get(); // Re-fetch session if we didn't get it above
-                console.log('[Auth] Recovery: Found session for recovery:', session.$id);
                 if (session && session.$id === userId) {
-                    console.log('[Auth] Valid session exists, attempting to create missing profile...');
 
                     const hasAdminLabel = session.labels?.includes('admin') || false;
 
@@ -104,7 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         }
                     );
 
-                    console.log('[Auth] Recovery: Document created, retrying fetch...');
                     // Retry fetch
                     const newProfile = await databases.getDocument(
                         DATABASE_ID,
@@ -117,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         isLoading: false,
                         isAuthenticated: true,
                     });
-                    console.log('[Auth] Recovery: Success');
                     return;
                 }
             } catch (recoveryError) {
@@ -132,20 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function register(email: string, password: string, username: string) {
-        console.log('[Auth] Signup started for:', email);
         try {
             // Create account
-            console.log('[Auth] Creating account...');
             const newAccount = await account.create(ID.unique(), email, password, username);
             if (!newAccount || !newAccount.$id) {
                 throw new Error('Account creation failed - no ID returned');
             }
-            console.log('[Auth] Account created with ID:', newAccount.$id);
 
             // Create session
-            console.log('[Auth] Creating session...');
             await account.createEmailPasswordSession(email, password);
-            console.log('[Auth] Session created.');
 
             // Create user profile in database - STRICT REQUIREMENT
             if (!DATABASE_ID || !COLLECTIONS.USERS) {
@@ -153,7 +139,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             try {
-                console.log('[Auth] Creating user profile in DB...');
                 await databases.createDocument(
                     DATABASE_ID,
                     COLLECTIONS.USERS,
@@ -163,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         is_admin: false,
                     }
                 );
-                console.log('[Auth] User profile created in DB.');
             } catch (dbError) {
                 console.error('[Auth] Failed to create user profile in DB:', dbError);
                 // If this fails, we effectively have a broken user. 
@@ -171,8 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 // For now, allow fetchUserProfile to catch it and try one more time or logout.
             }
 
+
             await fetchUserProfile(newAccount.$id);
-            console.log('[Auth] Signup process complete.');
         } catch (error: any) {
             console.error('Signup error:', error);
 
@@ -188,30 +172,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function login(email: string, password: string) {
-        console.log('[Auth] Login started for:', email);
         try {
             // Clear any existing session first
             try {
-                console.log('[Auth] Cleaning up old session...');
                 await account.deleteSession('current');
             } catch {
                 // No existing session - that's fine
             }
 
-            console.log('[Auth] Creating new session...');
             await account.createEmailPasswordSession(email, password);
 
-            console.log('[Auth] Verifying session...');
             // Verify session immediately
             const session = await account.get();
-            console.log('[Auth] Session verified:', session.$id);
             if (!session || !session.$id) {
                 // Check if we got an empty response that might be masked
                 throw new Error('Failed to retrieve session after login');
             }
 
             await fetchUserProfile(session.$id);
-            console.log('[Auth] Login process complete');
         } catch (error: any) {
             console.error('Login error:', error);
 

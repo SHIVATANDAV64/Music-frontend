@@ -2,10 +2,10 @@
  * Player Context
  * Global audio player state management with Spotify-like queue functionality
  */
-import { createContext, useContext, useReducer, useRef, useEffect, useState, type ReactNode } from 'react';
-import { storage, BUCKETS, getProxiedAudioUrlSync, fetchProxiedAudioBlob, isAudioProxied, fetchStorageAudioBlob } from '../lib/appwrite';
+import { createContext, useContext, useReducer, type ReactNode } from 'react';
 import { historyService } from '../services';
 import type { PlayableItem, PlayerState } from '../types';
+import { useAudioElement } from '../hooks/useAudioElement';
 
 // Action types
 type PlayerAction =
@@ -184,268 +184,18 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export function PlayerProvider({ children }: { children: ReactNode }) {
     const [state, dispatch] = useReducer(playerReducer, initialState);
 
-    // Use state for the audio element so components can react to instance swaps
-    const [audio, setAudio] = useState<HTMLAudioElement>(() => {
-        const a = new Audio();
-        a.volume = initialState.volume;
-        a.preload = 'auto'; // Improve initial buffering
-        return a;
+    const { audio, audioRef, seek } = useAudioElement({
+        currentTrack: state.currentTrack,
+        volume: state.volume,
+        repeatMode: state.repeat,
+        shuffle: state.shuffle,
+        onProgress: (time) => dispatch({ type: 'SET_PROGRESS', payload: time }),
+        onDuration: (duration) => dispatch({ type: 'SET_DURATION', payload: duration }),
+        onEnded: () => { /* Handle ended if needed specifically, but hook handles NEXT/REPEAT */ },
+        onPlay: () => dispatch({ type: 'PLAY' }),
+        onPause: () => dispatch({ type: 'PAUSE' }),
+        onNext: () => dispatch({ type: 'NEXT' })
     });
-
-    // Provide a ref for legacy/compatibility
-    const audioRef = useRef<HTMLAudioElement | null>(audio);
-
-    // Sync ref with audio state
-    useEffect(() => {
-        audioRef.current = audio;
-    }, [audio]);
-
-    // Use ref for repeat to avoid recreating audio element
-    const repeatRef = useRef(state.repeat);
-    const shuffleRef = useRef(state.shuffle);
-    const isSeekingRef = useRef(false);
-
-    // Keep refs in sync with state
-    useEffect(() => {
-        repeatRef.current = state.repeat;
-    }, [state.repeat]);
-
-    useEffect(() => {
-        shuffleRef.current = state.shuffle;
-    }, [state.shuffle]);
-
-    // Unified function to attach listeners to an audio element
-    const attachAudioListeners = (audio: HTMLAudioElement) => {
-        const handleTimeUpdate = () => {
-            if (!isSeekingRef.current) {
-                dispatch({ type: 'SET_PROGRESS', payload: audio.currentTime });
-            }
-        };
-
-        const handleLoadedMetadata = () => {
-            dispatch({ type: 'SET_DURATION', payload: audio.duration });
-        };
-
-        const handleEnded = () => {
-            if (repeatRef.current === 'one') {
-                audio.currentTime = 0;
-                audio.play();
-            } else {
-                dispatch({ type: 'NEXT' });
-            }
-        };
-
-        const handleCanPlay = () => {
-            const targetSeek = (audio as any)._targetSeek;
-            if (targetSeek !== undefined) {
-                console.log('[Player] Applying deferred seek to:', targetSeek);
-                audio.currentTime = targetSeek;
-                delete (audio as any)._targetSeek;
-            }
-        };
-
-        audio.addEventListener('timeupdate', handleTimeUpdate);
-        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-        audio.addEventListener('ended', handleEnded);
-        audio.addEventListener('canplay', handleCanPlay);
-
-        return () => {
-            audio.removeEventListener('timeupdate', handleTimeUpdate);
-            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            audio.removeEventListener('ended', handleEnded);
-            audio.removeEventListener('canplay', handleCanPlay);
-        };
-    };
-
-    // Initialize audio listeners whenever the audio element instance changes
-    useEffect(() => {
-        const cleanup = attachAudioListeners(audio);
-        return () => {
-            cleanup();
-            audio.pause();
-            audio.src = '';
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [audio]);
-
-    // Play when track changes
-    // Two-phase approach:
-    // 1. Start playing immediately with original URL (fast playback)
-    // 2. Fetch proxied blob URL in background (enables visualization)
-    // 3. Switch to blob URL when ready (seamless, enables Web Audio API)
-    // Play when track changes
-    // Robust implementation with race condition handling
-    const playbackRequestId = useRef(0);
-    const playPromiseRef = useRef<Promise<void> | null>(null);
-
-    useEffect(() => {
-        if (state.currentTrack) {
-            const currentRequestId = ++playbackRequestId.current;
-
-            const startPlayback = async () => {
-                // 1. Determine safe Audio URL
-                let audioUrl: string = '';
-                let isExternalSource = false;
-                let originalExternalUrl: string | null = null;
-
-                try {
-
-                    if ('audio_url' in state.currentTrack! && state.currentTrack.audio_url) {
-                        originalExternalUrl = state.currentTrack.audio_url;
-                        // Synchronously check if we have a proxied version ready
-                        audioUrl = getProxiedAudioUrlSync(originalExternalUrl);
-                        isExternalSource = true;
-                    } else if ('audio_file_id' in state.currentTrack! && state.currentTrack.audio_file_id) {
-                        audioUrl = storage.getFileView(BUCKETS.AUDIO, state.currentTrack.audio_file_id).toString();
-                        isExternalSource = false;
-                    } else {
-                        throw new Error('No audio source found');
-                    }
-
-                    // 1. Determine if we need a fresh audio element to prevent silence
-                    // If the current element has been "captured" by AudioContext, it will be silent 
-                    // for any non-proxied jamendo tracks. We reset it to ensure playback works.
-                    let currentAudio = audio;
-                    const isElementCaptured = (currentAudio as any)._isCaptured;
-
-                    if (isElementCaptured && isExternalSource && !audioUrl.startsWith('blob:')) {
-                        console.log('[Player] Resetting audio element to prevent context redirection silence');
-                        currentAudio.pause();
-                        currentAudio.src = '';
-
-                        // Create NEW element
-                        const newAudio = new Audio();
-                        newAudio.volume = state.volume;
-                        newAudio.preload = 'auto';
-                        setAudio(newAudio); // This triggers re-render and listener attachment
-                        currentAudio = newAudio;
-                    } else {
-                        currentAudio.pause();
-                    }
-
-                    // Don't await previous play promise, just catch any resulting 'interrupted' errors
-                    if (playPromiseRef.current) {
-                        playPromiseRef.current.catch(() => { });
-                    }
-
-                    if (playbackRequestId.current !== currentRequestId) return;
-
-                    currentAudio.currentTime = 0;
-
-                    // Configure CrossOrigin
-                    // We start with NO crossOrigin for Jamendo to ensure playback works, then upgrade later.
-                    if (isExternalSource && !isAudioProxied(originalExternalUrl!)) {
-                        currentAudio.removeAttribute('crossorigin');
-                    } else {
-                        currentAudio.crossOrigin = 'anonymous';
-                    }
-
-                    currentAudio.src = audioUrl;
-                    currentAudio.load();
-
-                    // 3. Play
-                    const playPromise = currentAudio.play();
-                    playPromiseRef.current = playPromise;
-
-                    await playPromise;
-
-                    if (playbackRequestId.current === currentRequestId) {
-                        dispatch({ type: 'PLAY' });
-
-                        // History recording
-                        const isEpisode = 'episode_id' in state.currentTrack!;
-                        const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
-                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource, state.currentTrack!);
-                    }
-
-                    // 4. Background Proxy Upgrade (for Visualization)
-                    if (playbackRequestId.current === currentRequestId) {
-                        try {
-                            let blobUrl = '';
-
-                            // If it's external, check if we need proxy
-                            if (isExternalSource && !isAudioProxied(originalExternalUrl!)) {
-                                blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
-                            }
-                            // If it's Appwrite storage, fetch blob for best visualization support
-                            else if (!isExternalSource && !audioUrl.startsWith('blob:')) {
-                                const fileId = state.currentTrack!.audio_file_id!;
-                                blobUrl = await fetchStorageAudioBlob(fileId);
-                            }
-
-                            // If we got a blob URL, upgrade the audio src
-                            if (blobUrl && playbackRequestId.current === currentRequestId && currentAudio.src !== blobUrl) {
-                                console.log('[Player] Upgrading to proxied/storage blob for visualization');
-                                const currentTime = currentAudio.currentTime;
-                                const wasPlaying = !currentAudio.paused;
-
-                                currentAudio.crossOrigin = 'anonymous';
-                                currentAudio.src = blobUrl;
-                                // Use targetSeek to ensures position is restored once metadata loads
-                                (currentAudio as any)._targetSeek = currentTime;
-
-                                if (wasPlaying) {
-                                    const resumePromise = currentAudio.play();
-                                    playPromiseRef.current = resumePromise;
-                                    await resumePromise.catch((e: Error) => {
-                                        if (e.name !== 'AbortError') console.warn('Resume failed:', e);
-                                    });
-                                }
-                            }
-                        } catch (err) {
-                            console.warn('[Player] Blob upgrade failed, continuing with original:', err);
-                        }
-                    }
-
-                } catch (err: any) {
-                    if (playbackRequestId.current === currentRequestId) {
-                        if (err.name === 'AbortError') {
-                            // Expected during rapid skipping
-                            console.debug('[Player] Playback aborted by new request');
-                        } else {
-                            console.error('[Player] Playback failed:', err);
-
-                            // Fallback: Try proxy if original source failed (e.g. 404)
-                            if (isExternalSource && !audioUrl.startsWith('blob:')) {
-                                console.log('[Player] Original source failed, attempting proxy fallback...');
-                                try {
-                                    const blobUrl = await fetchProxiedAudioBlob(originalExternalUrl!);
-
-                                    // Verify we are still on the same track request
-                                    if (playbackRequestId.current === currentRequestId) {
-                                        audio.crossOrigin = 'anonymous';
-                                        audio.src = blobUrl;
-                                        audio.load();
-                                        await audio.play();
-                                        dispatch({ type: 'PLAY' });
-                                        const isEpisode = 'episode_id' in state.currentTrack!;
-                                        const trackSource = 'audio_url' in state.currentTrack! ? 'jamendo' : 'appwrite';
-                                        historyService.recordPlay(state.currentTrack!.$id, isEpisode, trackSource, state.currentTrack!);
-                                        return; // Recovered successfully
-                                    }
-                                } catch (proxyErr) {
-                                    console.warn('[Player] Proxy fallback also failed:', proxyErr);
-                                }
-                            }
-
-                            // Auto-skip if playback failed completely
-                            console.warn('[Player] Track unavailable, skipping to next...');
-                            setTimeout(() => {
-                                dispatch({ type: 'NEXT' });
-                            }, 1500);
-                        }
-                    }
-                }
-            };
-
-            startPlayback();
-        }
-    }, [state.currentTrack?.$id]);
-
-    // Volume change handler
-    useEffect(() => {
-        audio.volume = state.volume;
-    }, [state.volume, audio]);
 
     function play(item: PlayableItem) {
         dispatch({ type: 'SET_TRACK', payload: item });
@@ -464,50 +214,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     function resume() {
         audio.play();
         dispatch({ type: 'PLAY' });
-    }
-
-    function seek(time: number) {
-        if (!audio) return;
-
-        const duration = audio.duration;
-        if (!Number.isFinite(duration) || duration === 0) {
-            console.warn('[Player] Cannot seek: Duration is invalid or not yet loaded:', duration);
-            return;
-        }
-
-        if (!Number.isFinite(time)) {
-            console.warn('[Player] Cannot seek: Invalid time provided:', time);
-            return;
-        }
-
-        const safeTime = Math.max(0, Math.min(time, duration));
-
-        try {
-            console.log(`[Player] Seeking to ${safeTime}s / ${duration}s (ReadyState: ${audio.readyState}, Source: ${audio.src.substring(0, 50)}...)`);
-
-            // Set seeking flag to prevent timeupdate from overriding
-            isSeekingRef.current = true;
-
-            // If audio is not ready, defer the seek
-            if (audio.readyState < 1) {
-                console.log('[Player] Audio not ready for seeking, deferring...');
-                (audio as any)._targetSeek = safeTime;
-            } else {
-                audio.currentTime = safeTime;
-            }
-
-            // Apply to state immediately for UI responsiveness
-            dispatch({ type: 'SET_PROGRESS', payload: safeTime });
-
-            // Reset seeking flag after a short delay to allow browser to update
-            setTimeout(() => {
-                isSeekingRef.current = false;
-            }, 150); // Increased delay for stability
-
-        } catch (err) {
-            isSeekingRef.current = false;
-            console.error('[Player] Seek failed:', err);
-        }
     }
 
     function setVolume(volume: number) {
@@ -603,3 +309,4 @@ export function usePlayer() {
     }
     return context;
 }
+

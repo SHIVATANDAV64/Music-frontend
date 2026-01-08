@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playlistService } from '../../services/playlist.service';
@@ -17,6 +18,8 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showCreate, setShowCreate] = useState(false);
+    const [newName, setNewName] = useState('');
 
     useEffect(() => {
         if (isOpen && user) {
@@ -44,7 +47,6 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
         try {
             await playlistService.addTrackToPlaylist(playlistId, track, user.$id);
             onClose();
-            // TODO: Show success toast
         } catch (err) {
             console.error('Failed to add to playlist:', err);
             setError('Failed to add track to playlist');
@@ -53,90 +55,172 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
         }
     }
 
+    async function handleCreatePlaylist() {
+        if (!user || !newName.trim() || isAdding) return;
+        setIsAdding(true);
+        try {
+            const newPlaylist = await playlistService.createPlaylist(user.$id, newName.trim());
+            if (newPlaylist) {
+                setPlaylists(prev => [newPlaylist, ...prev]);
+                setNewName('');
+                setShowCreate(false);
+                await handleAddToPlaylist(newPlaylist.$id);
+            }
+        } catch (err) {
+            console.error('Failed to create playlist:', err);
+            setError('Failed to create playlist');
+        } finally {
+            setIsAdding(false);
+        }
+    }
+
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150]"
+                        className="absolute inset-0 bg-black/80 backdrop-blur-md pointer-events-auto"
                     />
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#161616] border border-white/10 rounded-2xl shadow-2xl z-[160] overflow-hidden"
+                        exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                        className="relative w-[90%] max-w-sm bg-[var(--color-card)] border border-[var(--color-border)] rounded-sm shadow-2xl overflow-hidden pointer-events-auto"
+                        style={{ backgroundColor: 'var(--color-card)' }}
                     >
-                        <div className="flex items-center justify-between p-6 border-b border-white/5">
-                            <h2 className="text-xl font-bold text-white">Add to Playlist</h2>
+                        {/* Technical Accent Decorators */}
+                        <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--color-accent-gold)]/40" />
+                        <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[var(--color-accent-gold)]/40" />
+
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-void)]/20">
+                            <div>
+                                <h2 className="font-display text-sm text-[var(--color-text-primary)] uppercase tracking-[0.1em] font-bold">
+                                    Link Media Archive
+                                </h2>
+                                <p className="font-mono text-[8px] text-[var(--color-text-muted)] uppercase tracking-widest mt-0.5">
+                                    Add to Collection: {track.title.length > 20 ? track.title.substring(0, 20) + '...' : track.title}
+                                </p>
+                            </div>
                             <button
                                 onClick={onClose}
-                                className="p-2 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] transition-colors"
                             >
-                                <X size={20} />
+                                <X size={16} />
                             </button>
                         </div>
 
-                        <div className="p-4 max-h-[60vh] overflow-y-auto">
+                        <div className="p-4 max-h-[50vh] overflow-y-auto scrollbar-hide">
                             {isLoading ? (
-                                <div className="space-y-3">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
+                                <div className="space-y-2 p-1">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-12 bg-[var(--color-void)] border border-[var(--color-border)] opacity-20 animate-pulse rounded-sm" />
                                     ))}
                                 </div>
                             ) : error ? (
-                                <div className="text-center py-8 text-red-400">
+                                <div className="text-center py-8 font-mono text-[10px] text-red-500 border border-red-500/10 bg-red-500/5 mx-2 my-2">
                                     {error}
                                 </div>
                             ) : playlists.length === 0 ? (
-                                <div className="text-center py-8 text-white/40">
-                                    <Music size={48} className="mx-auto mb-4 opacity-50" />
-                                    <p>No playlists found</p>
-                                    <p className="text-sm">Create one in the library to get started</p>
+                                <div className="text-center py-12 opacity-30 border border-dashed border-[var(--color-border)] mx-1">
+                                    <Music size={32} className="mx-auto mb-4" />
+                                    <p className="font-mono text-[10px] uppercase tracking-widest">Awaiting Archive Creation</p>
                                 </div>
                             ) : (
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     {playlists.map(playlist => (
                                         <button
                                             key={playlist.$id}
                                             disabled={isAdding}
                                             onClick={() => handleAddToPlaylist(playlist.$id)}
-                                            className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group text-left"
+                                            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent hover:border-[var(--color-border)] hover:bg-[var(--color-void)] transition-all group relative text-left"
                                         >
-                                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
-                                                <Music size={20} />
+                                            <div className="w-10 h-10 border border-[var(--color-border)] bg-[var(--color-void)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors">
+                                                <Music size={14} />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="font-medium text-white truncate">
+                                                <h3 className="font-display text-xs text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-gold)] transition-colors truncate-none break-words">
                                                     {playlist.name}
                                                 </h3>
-                                                <p className="text-sm text-white/40 truncate">
-                                                    {playlist.tracks?.length || 0} tracks
+                                                <p className="font-mono text-[9px] text-[var(--color-text-muted)] uppercase mt-1 tracking-tight">
+                                                    {playlist.tracks?.length || 0} SECTORS INDEXED
                                                 </p>
                                             </div>
-                                            {isAdding && (
-                                                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            )}
+                                            <div className="flex items-center">
+                                                {isAdding ? (
+                                                    <div className="w-4 h-4 border border-[var(--color-accent-gold)] border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <Plus size={12} className="opacity-0 group-hover:opacity-100 text-[var(--color-accent-gold)] translate-x-1 group-hover:translate-x-0 transition-all duration-300" />
+                                                )}
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-4 border-t border-white/5 bg-white/[0.02]">
-                            <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-white/20 text-white/60 hover:text-white hover:bg-white/5 transition-colors uppercase text-sm font-medium tracking-wide">
-                                <Plus size={18} />
-                                New Playlist
-                            </button>
+                        <div className="p-4 bg-[var(--color-void)]/40 border-t border-[var(--color-border)]">
+                            <AnimatePresence mode="wait">
+                                {!showCreate ? (
+                                    <motion.button
+                                        key="btn"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={() => setShowCreate(true)}
+                                        className="group w-full flex items-center justify-center gap-2 py-3 border border-[var(--color-border)] hover:border-[var(--color-accent-gold)] text-[var(--color-text-primary)] transition-all duration-300"
+                                    >
+                                        <Plus size={16} className="text-[var(--color-accent-gold)]" />
+                                        <span className="font-mono text-[10px] tracking-[0.2em] uppercase">
+                                            Initialize New Archive
+                                        </span>
+                                    </motion.button>
+                                ) : (
+                                    <motion.div
+                                        key="input"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="space-y-3"
+                                    >
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={newName}
+                                            onChange={(e) => setNewName(e.target.value)}
+                                            placeholder="ENTER_FILENAME_OR_ARCHIVE_ID..."
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCreatePlaylist()}
+                                            className="w-full bg-[var(--color-void)] border border-[var(--color-border)] px-4 py-3 font-mono text-[10px] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-gold)] placeholder:text-[var(--color-text-muted)]/40"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => setShowCreate(false)}
+                                                className="flex-1 py-2.5 border border-[var(--color-border)] text-[var(--color-text-muted)] font-mono text-[9px] uppercase tracking-widest hover:bg-[var(--color-void)] transition-all"
+                                            >
+                                                Abort
+                                            </button>
+                                            <button
+                                                onClick={handleCreatePlaylist}
+                                                disabled={isAdding || !newName.trim()}
+                                                className="flex-1 py-2.5 bg-[var(--color-accent-gold)]/5 border border-[var(--color-accent-gold)] text-[var(--color-accent-gold)] font-mono text-[9px] uppercase tracking-widest hover:bg-[var(--color-accent-gold)] hover:text-[var(--color-void)] transition-all"
+                                            >
+                                                Confirm_Init
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
+
+    return createPortal(modalContent, document.body);
 }

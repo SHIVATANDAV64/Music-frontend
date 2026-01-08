@@ -81,7 +81,7 @@ export const podcastService = {
      * Note: Direct episode fetch not implemented - episodes are fetched via parent podcast
      */
     async getEpisode(_id: string): Promise<Episode | null> {
-        console.warn('getEpisode: Direct episode fetch not implemented in function');
+
         return null;
     },
 };

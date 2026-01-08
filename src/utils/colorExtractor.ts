@@ -77,7 +77,7 @@ export async function extractDominantColor(
         };
 
         img.onerror = () => {
-            console.warn('Failed to load image for color extraction');
+
             resolve(getDefaultColor(opacity));
         };
 

@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Minimize2, Heart, ListMusic, Volume2, Volume1, VolumeX, Eye, EyeOff, Plus } from 'lucide-react';
 import { extractDominantColor } from '../../utils/colorExtractor';
-// import { getLyrics, type LyricsResult } from '../../services/lyrics.service';
+
 import { CymaticsVisualizer, VisualizerToggle } from '../ui/CymaticsVisualizer';
 import { usePlayer } from '../../context/PlayerContext';
 import { BreathingWaveform } from './BreathingWaveform';
@@ -48,8 +48,8 @@ export function FullscreenPlayer({
     } = usePlayer();
     const { user } = useAuth();
 
-    // const [lyrics, setLyrics] = useState<LyricsResult | null>(null);
-    // const [activeLineIndex, setActiveLineIndex] = useState(-1);
+
+
     const [themeColor, setThemeColor] = useState('#d4af37'); // Default gold
     const [visualizerMode, setVisualizerMode] = useState<'chladni' | 'water' | 'sacred' | 'turing' | 'voronoi' | 'hopf'>('sacred');
     const [isFavorite, setIsFavorite] = useState(false);
@@ -160,30 +160,8 @@ export function FullscreenPlayer({
         }
     }
 
-    // Fetch lyrics
-    // useEffect(() => {
-    //     if (!trackName || !artistName || !isVisible) {
-    //         setLyrics(null);
-    //         return;
-    //     }
-    //     getLyrics(trackName, artistName)
-    //         .then(setLyrics)
-    //         .catch(err => console.error('Lyrics fetch failed:', err));
-    // }, [trackName, artistName, isVisible]);
 
-    // Sync Lyrics
-    // useEffect(() => {
-    //     if (!lyrics?.syncedLyrics) return;
-    //     const lines = lyrics.syncedLyrics;
-    //     let idx = -1;
-    //     for (let i = lines.length - 1; i >= 0; i--) {
-    //         if (currentTime >= lines[i].time) {
-    //             idx = i;
-    //             break;
-    //         }
-    //     }
-    //     setActiveLineIndex(idx);
-    // }, [currentTime, lyrics]);
+
 
     if (!isVisible) return null;
 
@@ -236,25 +214,10 @@ export function FullscreenPlayer({
             {/* 3. LAYER: CENTER STAGE (Lyrics / Metadata) */}
             <div className="relative z-40 flex-1 flex flex-col items-center justify-center text-center px-4 -mt-20">
                 {/* Immersive Metadata - visible when UI is hidden for focus */}
-                {/* {!showUI && (
-                    // <div className="mb-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                    //     <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/90 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                    //         {trackName || 'Unknown Track'}
-                    //     </h2>
-                    //     <p className="text-xl md:text-2xl text-[#d4af37]/80 font-medium tracking-[0.2em] drop-shadow-md italic uppercase opacity-80">
-                    //         {artistName || 'Unknown Artist'}
-                    //     </p>
-                    // </div>
-                // )} */}
+
 
                 {/* Lyrics Highlight */}
-                {/* <div className="h-24 flex items-center justify-center">
-                    <p className="text-white/40 italic flex items-center gap-2">
-                        <span className="w-1 h-1 rounded-full bg-current" />
-                        Sound made visible
-                        <span className="w-1 h-1 rounded-full bg-current" />
-                    </p>
-                </div> */}
+
             </div>
 
             {/* Persistent Waveform - visible even when UI is hidden */}

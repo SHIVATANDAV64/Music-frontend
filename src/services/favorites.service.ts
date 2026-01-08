@@ -5,15 +5,6 @@
 import { manageFavorites } from '../lib/functions';
 import type { Track } from '../types';
 
-interface FavoriteResponse {
-    $id: string;
-    user_id: string;
-    track_id: string;
-    track_source: 'jamendo' | 'appwrite';
-    $createdAt: string;
-    track?: Track;
-}
-
 export const favoritesService = {
     /**
      * Check if a track is favorited by user
@@ -21,12 +12,12 @@ export const favoritesService = {
     async isFavorite(userId: string, trackId: string): Promise<boolean> {
         if (!userId || !trackId) return false;
 
-        const response = await manageFavorites<{ isFavorite: boolean }>({
+        const response = await manageFavorites<any>({
             action: 'check',
             trackId,
         });
 
-        return response.success && response.data?.isFavorite === true;
+        return response.success && response.data?.success && response.data?.data?.isFavorite === true;
     },
 
     /**
@@ -37,15 +28,15 @@ export const favoritesService = {
             throw new Error('User ID and track are required');
         }
 
-        const response = await manageFavorites({
+        const response = await manageFavorites<any>({
             action: 'add',
             trackId: track.$id,
             trackSource: track.source,
             metadata: track, // Send full metadata for ingestion
         });
 
-        if (!response.success) {
-            throw new Error(response.error || 'Failed to add favorite');
+        if (!response.success || !response.data?.success) {
+            throw new Error(response.error || response.data?.error || 'Failed to add favorite');
         }
     },
 
@@ -53,13 +44,13 @@ export const favoritesService = {
      * Remove track from favorites
      */
     async removeFavorite(_userId: string, trackId: string): Promise<void> {
-        const response = await manageFavorites({
+        const response = await manageFavorites<any>({
             action: 'remove',
             trackId,
         });
 
-        if (!response.success) {
-            throw new Error(response.error || 'Failed to remove favorite');
+        if (!response.success || !response.data?.success) {
+            throw new Error(response.error || response.data?.error || 'Failed to remove favorite');
         }
     },
 
@@ -69,22 +60,21 @@ export const favoritesService = {
      */
     async toggleFavorite(track: Track): Promise<boolean> {
         try {
-            const response = await manageFavorites<FavoriteResponse>({
+            const response = await manageFavorites<any>({
                 action: 'toggle',
                 trackId: track.$id,
                 trackSource: track.source,
                 metadata: track // Send full metadata for ingestion
             });
 
-            if (!response.success) {
-                if (response.error?.includes('Unknown attribute: "track_source"')) {
+            if (!response.success || !response.data?.success) {
+                if (response.error?.includes('Unknown attribute: "track_source"') || response.data?.error?.includes('Unknown attribute: "track_source"')) {
                     throw new Error('Database Schema Mismatch: The "favorites" collection is missing the "track_source" attribute. Please add it in Appwrite Console.');
                 }
-                throw new Error(response.error || 'Failed to toggle favorite');
+                throw new Error(response.error || response.data?.error || 'Failed to toggle favorite');
             }
 
-            const data = response.data as any;
-            return data?.isFavorite ?? data?.data?.isFavorite ?? false;
+            return response.data?.data?.isFavorite ?? false;
         } catch (err: any) {
             console.error('[FavoritesService] Toggle failed:', err);
             // Re-throw with a more user-friendly message if it's the schema error
@@ -102,36 +92,20 @@ export const favoritesService = {
     async getUserFavorites(userId: string): Promise<Track[]> {
         if (!userId) return [];
 
-        const response = await manageFavorites<FavoriteResponse[]>({
+        const response = await manageFavorites<any>({
             action: 'list',
         });
 
-        if (!response.success) {
-            console.error('Failed to get favorites:', response.error);
+        if (!response.success || !response.data?.success) {
+            console.error('Failed to get favorites:', response.error || response.data?.error);
             return [];
         }
 
-        // Map favorites to tracks
-        // Handle double-wrapping from function response
-        const rawData = response.data as any;
-        let favoritesData: FavoriteResponse[] = [];
-
-        if (Array.isArray(rawData)) {
-            favoritesData = rawData;
-        } else if (rawData && typeof rawData === 'object') {
-            if (Array.isArray(rawData.data)) {
-                favoritesData = rawData.data;
-            } else if (Array.isArray(rawData.documents)) {
-                favoritesData = rawData.documents;
-            }
-        }
-
+        const favoritesData = response.data.data || [];
         const tracks: Track[] = [];
 
         for (const fav of favoritesData) {
-            if (!fav) continue;
-            if (fav.track) {
-                // Now supports inflated track for BOTH Appwrite and Jamendo
+            if (fav?.track) {
                 tracks.push(fav.track);
             }
         }
@@ -145,14 +119,14 @@ export const favoritesService = {
     async getFavoriteIds(userId: string): Promise<Set<string>> {
         if (!userId) return new Set();
 
-        const response = await manageFavorites<{ ids: string[] }>({
+        const response = await manageFavorites<any>({
             action: 'get_ids',
         });
 
-        if (!response.success) {
+        if (!response.success || !response.data?.success) {
             return new Set();
         }
 
-        return new Set(response.data?.ids || []);
+        return new Set(response.data.data?.ids || []);
     },
 };

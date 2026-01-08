@@ -100,13 +100,9 @@ export function useAudioAnalyzer(
                 frequenciesRef.current = new Uint8Array(bufferLength);
                 waveformRef.current = new Uint8Array(bufferLength);
 
-                console.log('[AudioAnalyzer] Initialized', {
-                    fftSize: analyzer.fftSize,
-                    bufferLength,
-                    sampleRate: audioContext.sampleRate,
-                });
-            } catch (error) {
-                console.error('[AudioAnalyzer] Failed to initialize:', error);
+
+            } catch (err) {
+                console.error('[AudioAnalyzer] Failed to initialize:', err);
             }
         };
 

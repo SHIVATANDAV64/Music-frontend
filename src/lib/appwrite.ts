@@ -40,7 +40,7 @@ export { ID, Query };
 
 // Database ID constant
 export const DATABASE_ID = import.meta.env.VITE_DATABASE_ID;
-console.log('[Appwrite DEBUG] Database ID:', DATABASE_ID);
+
 if (!DATABASE_ID) {
     console.warn('[Appwrite WARNING] VITE_DATABASE_ID is missing! Database features will fail.');
 }
@@ -108,7 +108,7 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
                 return originalUrl;
             }
 
-            console.log('[AudioProxy] Executing proxy function...');
+
 
             const execution = await functions.createExecution(
                 functionId,
@@ -130,7 +130,7 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
             // Generate a Storage View URL
             const storageUrl = storage.getFileView(BUCKETS.AUDIO, result.fileId).toString();
 
-            console.log('[AudioProxy] Fetching file data for real Blob conversion...');
+
 
             // Convert to real Blob URL for perfect seeking & visualization
             const response = await fetch(storageUrl);
@@ -141,7 +141,7 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
 
             audioProxyCache.set(originalUrl, blobUrl);
 
-            console.log('[AudioProxy] Success: Real Blob URL created. Perfect seeking enabled.');
+
             return blobUrl;
 
 
@@ -160,7 +160,6 @@ export async function fetchProxiedAudioBlob(originalUrl: string): Promise<string
         }
     })();
 
-    pendingProxyRequests.set(originalUrl, fetchPromise);
     pendingProxyRequests.set(originalUrl, fetchPromise);
     return fetchPromise;
 }
@@ -187,7 +186,7 @@ export async function fetchStorageAudioBlob(fileId: string): Promise<string> {
             // Generate a Storage View URL
             const storageUrl = storage.getFileView(BUCKETS.AUDIO, fileId).toString();
 
-            console.log('[StorageProxy] Fetching file data for Blob conversion...');
+
 
             // Convert to real Blob URL for perfect seeking & visualization
             const response = await fetch(storageUrl);
@@ -197,7 +196,7 @@ export async function fetchStorageAudioBlob(fileId: string): Promise<string> {
             const blobUrl = URL.createObjectURL(blob);
 
             audioProxyCache.set(cacheKey, blobUrl);
-            console.log('[StorageProxy] Success: Blob URL created for storage file.');
+
             return blobUrl;
         } catch (error) {
             console.error('[StorageProxy] Failed:', error);
@@ -212,29 +211,7 @@ export async function fetchStorageAudioBlob(fileId: string): Promise<string> {
     return fetchPromise;
 }
 
-/**
- * Build the audio proxy URL
- * Uses the Appwrite function execution endpoint
- */
-// Ensure buildAudioProxyUrl is not marked as unused if we want to keep it
-// but we've switched to SDK execution for better security/CORS.
-// I will comment it out or delete it to avoid lint warnings if not needed.
-/*
-function buildAudioProxyUrl(originalUrl: string): string | null {
-    const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
-    const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
-    const functionId = import.meta.env.VITE_FUNCTION_AUDIO_PROXY;
 
-    if (!endpoint || !projectId || !functionId) {
-        return null;
-    }
-
-    // Appwrite function execution URL with query parameter
-    // Format: {endpoint}/functions/{functionId}/executions?url={encodedUrl}
-    // Note: For public functions (execute: ["any"]), we can call via REST
-    return `${endpoint}/functions/${functionId}/executions?url=${encodeURIComponent(originalUrl)}`;
-}
-*/
 
 /**
  * Sync version - returns original URL immediately

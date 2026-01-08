@@ -4,8 +4,8 @@
  * Part of hybrid architecture: Jamendo + Appwrite
  */
 
-import { getTracks, searchTracks, getTracksByGenre, getTrendingTracks, getFeaturedByGenre, JAMENDO_GENRES, type JamendoTrack } from './jamendoService';
-import { databases, COLLECTIONS, Query, storage, BUCKETS } from '../lib/appwrite';
+import { getTracks, searchTracks, getTracksByGenre, getTrendingTracks, getFeaturedByGenre, getTrackById, JAMENDO_GENRES, type JamendoTrack } from './jamendoService';
+import { databases, COLLECTIONS, Query, storage, BUCKETS, functions } from '../lib/appwrite';
 import { searchContent } from '../lib/functions';
 import type { Track, TrackSource } from '../types';
 
@@ -101,7 +101,7 @@ export const musicService = {
             }
 
             // 2. Process Jamendo tracks (External API)
-            if (jamendoResponse.status === 'fulfilled' && jamendoResponse.value.headers.status === 'success') {
+            if (jamendoResponse.status === 'fulfilled' && jamendoResponse.value?.headers?.status === 'success') {
                 const jamendoTracks = jamendoResponse.value.results.map(convertJamendoTrack);
 
                 jamendoTracks.forEach(track => {
@@ -174,7 +174,7 @@ export const musicService = {
             }
 
             // 2. Fallback to Jamendo API if not in our DB
-            const jamendoTrack = await import('./jamendoService').then(m => m.getTrackById(itemId));
+            const jamendoTrack = await getTrackById(itemId);
             if (jamendoTrack) {
                 return convertJamendoTrack(jamendoTrack);
             }
@@ -218,7 +218,6 @@ export const musicService = {
             // Priority: Use the Appwrite Function for the core execution
             const functionId = import.meta.env.VITE_FUNCTION_GET_TRACKS;
             if (functionId) {
-                const { functions } = await import('../lib/appwrite');
                 const execution = await functions.createExecution(
                     functionId,
                     JSON.stringify({ limit: 50 }),
@@ -234,7 +233,7 @@ export const musicService = {
                 }
             }
         } catch (e) {
-            console.warn('[MusicService] Function-based fetch failed, falling back to direct DB:', e);
+            // Function call failed silently - fallback to direct DB below
         }
 
         // Direct DB Fallback if function fails or is missing
@@ -261,7 +260,7 @@ export const musicService = {
             try {
                 await storage.deleteFile(BUCKETS.AUDIO, track.audio_file_id);
             } catch (e) {
-                console.warn('Failed to delete audio file', e);
+                // Audio file deletion failed - continue with document deletion
             }
         }
 
@@ -270,7 +269,7 @@ export const musicService = {
             try {
                 await storage.deleteFile(BUCKETS.COVERS, track.cover_image_id);
             } catch (e) {
-                console.warn('Failed to delete cover image', e);
+                // Cover image deletion failed - continue with document deletion
             }
         }
 

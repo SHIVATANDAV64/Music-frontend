@@ -23,17 +23,7 @@ const FUNCTION_IDS = {
 
 export type FunctionId = string;
 
-// Initialize Appwrite Functions SDK
-// const functions = new Functions(client); // This line is removed as 'functions' is now imported
 
-// Response types
-// export interface FunctionResponse<T = unknown> { // This interface is now imported
-//     success: boolean;
-//     data?: T;
-//     error?: string;
-//     total?: number;
-//     hasMore?: boolean;
-// }
 
 /**
  * Execute an Appwrite Function using the SDK
@@ -62,7 +52,7 @@ export async function callFunction<T>(
                 return { success: true, data: response as T };
             } catch (e) {
                 console.error(`[Functions] Parse error for ${functionId}:`, e);
-                console.debug(`[Functions] Raw response:`, execution.responseBody);
+
                 return { success: false, error: 'Invalid JSON response from function' };
             }
         }
