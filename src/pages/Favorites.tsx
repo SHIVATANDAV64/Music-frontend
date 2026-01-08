@@ -113,7 +113,11 @@ export function Favorites() {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {favorites.map((track) => (
-                            <MusicCard key={track.$id} track={track} />
+                            <MusicCard
+                                key={track.$id}
+                                track={track}
+                                onUnfavorite={(id) => setFavorites(prev => prev.filter(t => t.$id !== id))}
+                            />
                         ))}
                     </div>
                 )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Music } from 'lucide-react';
+import { X, Plus, Music, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playlistService } from '../../services/playlist.service';
 import { useAuth } from '../../context/AuthContext';
@@ -10,9 +10,10 @@ interface PlaylistSelectorProps {
     isOpen: boolean;
     onClose: () => void;
     track: Track;
+    onUpdate?: (playlistId: string, trackId: string, action: 'add' | 'remove') => void;
 }
 
-export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorProps) {
+export function PlaylistSelector({ isOpen, onClose, track, onUpdate }: PlaylistSelectorProps) {
     const { user } = useAuth();
     const [playlists, setPlaylists] = useState<Playlist[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -41,15 +42,34 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
         }
     }
 
-    async function handleAddToPlaylist(playlistId: string) {
+    async function handleTogglePlaylist(playlist: Playlist) {
         if (!user || isAdding) return;
         setIsAdding(true);
         try {
-            await playlistService.addTrackToPlaylist(playlistId, track, user.$id);
-            onClose();
+            const isTrackInPlaylist = playlist.tracks?.some(t => t.$id === track.$id);
+
+            if (isTrackInPlaylist) {
+                await playlistService.removeTrackFromPlaylist(playlist.$id, track.$id);
+                if (onUpdate) onUpdate(playlist.$id, track.$id, 'remove');
+                // Update local state to reflect removal
+                setPlaylists(prev => prev.map(p =>
+                    p.$id === playlist.$id
+                        ? { ...p, tracks: p.tracks?.filter(t => t.$id !== track.$id) }
+                        : p
+                ));
+            } else {
+                await playlistService.addTrackToPlaylist(playlist.$id, track, user.$id);
+                if (onUpdate) onUpdate(playlist.$id, track.$id, 'add');
+                // Update local state to reflect addition
+                setPlaylists(prev => prev.map(p =>
+                    p.$id === playlist.$id
+                        ? { ...p, tracks: [...(p.tracks || []), track] }
+                        : p
+                ));
+            }
         } catch (err) {
-            console.error('Failed to add to playlist:', err);
-            setError('Failed to add track to playlist');
+            console.error('Failed to toggle playlist membership:', err);
+            setError('Failed to update playlist');
         } finally {
             setIsAdding(false);
         }
@@ -64,7 +84,7 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
                 setPlaylists(prev => [newPlaylist, ...prev]);
                 setNewName('');
                 setShowCreate(false);
-                await handleAddToPlaylist(newPlaylist.$id);
+                await handleTogglePlaylist(newPlaylist);
             }
         } catch (err) {
             console.error('Failed to create playlist:', err);
@@ -133,33 +153,38 @@ export function PlaylistSelector({ isOpen, onClose, track }: PlaylistSelectorPro
                                 </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {playlists.map(playlist => (
-                                        <button
-                                            key={playlist.$id}
-                                            disabled={isAdding}
-                                            onClick={() => handleAddToPlaylist(playlist.$id)}
-                                            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent hover:border-[var(--color-border)] hover:bg-[var(--color-void)] transition-all group relative text-left"
-                                        >
-                                            <div className="w-10 h-10 border border-[var(--color-border)] bg-[var(--color-void)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)] transition-colors">
-                                                <Music size={14} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-display text-xs text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-gold)] transition-colors truncate-none break-words">
-                                                    {playlist.name}
-                                                </h3>
-                                                <p className="font-mono text-[9px] text-[var(--color-text-muted)] uppercase mt-1 tracking-tight">
-                                                    {playlist.tracks?.length || 0} SECTORS INDEXED
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center">
-                                                {isAdding ? (
-                                                    <div className="w-4 h-4 border border-[var(--color-accent-gold)] border-t-transparent rounded-full animate-spin" />
-                                                ) : (
-                                                    <Plus size={12} className="opacity-0 group-hover:opacity-100 text-[var(--color-accent-gold)] translate-x-1 group-hover:translate-x-0 transition-all duration-300" />
-                                                )}
-                                            </div>
-                                        </button>
-                                    ))}
+                                    {playlists.map(playlist => {
+                                        const isTrackInPlaylist = playlist.tracks?.some(t => t.$id === track.$id);
+                                        return (
+                                            <button
+                                                key={playlist.$id}
+                                                disabled={isAdding}
+                                                onClick={() => handleTogglePlaylist(playlist)}
+                                                className={`w-full flex items-center gap-4 px-4 py-3 border border-transparent hover:border-[var(--color-border)] hover:bg-[var(--color-void)] transition-all group relative text-left ${isTrackInPlaylist ? 'bg-[var(--color-accent-gold)]/5 border-[var(--color-accent-gold)]/20' : ''}`}
+                                            >
+                                                <div className={`w-10 h-10 border border-[var(--color-border)] bg-[var(--color-void)] flex items-center justify-center transition-colors ${isTrackInPlaylist ? 'text-[var(--color-accent-gold)] border-[var(--color-accent-gold)]/50' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-gold)]'}`}>
+                                                    <Music size={14} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className={`font-display text-xs transition-colors truncate-none break-words ${isTrackInPlaylist ? 'text-[var(--color-accent-gold)]' : 'text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-gold)]'}`}>
+                                                        {playlist.name}
+                                                    </h3>
+                                                    <p className="font-mono text-[9px] text-[var(--color-text-muted)] uppercase mt-1 tracking-tight">
+                                                        {playlist.tracks?.length || 0} SECTORS INDEXED
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center">
+                                                    {isAdding ? (
+                                                        <div className="w-4 h-4 border border-[var(--color-accent-gold)] border-t-transparent rounded-full animate-spin" />
+                                                    ) : isTrackInPlaylist ? (
+                                                        <Check size={14} className="text-[var(--color-accent-gold)] animate-in zoom-in duration-300" />
+                                                    ) : (
+                                                        <Plus size={12} className="opacity-0 group-hover:opacity-100 text-[var(--color-accent-gold)] translate-x-1 group-hover:translate-x-0 transition-all duration-300" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -10,3 +10,6 @@ export { AdminUpload } from './AdminUpload';
 export { Profile } from './Profile';
 export { Favorites } from './Favorites';
 export { Settings } from './Settings';
+export { ForgotPassword } from './ForgotPassword';
+export { ResetPassword } from './ResetPassword';
+export { VerifyEmail } from './VerifyEmail';

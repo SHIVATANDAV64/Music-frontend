@@ -15,7 +15,7 @@ export function Footer() {
                     <h4 className="font-display text-2xl tracking-widest uppercase text-[var(--color-text-primary)]">AUDIO_OS</h4>
                     <p className="font-mono text-xs text-[var(--color-text-muted)] max-w-xs leading-relaxed">
                         High-fidelity audio processing terminal.
-                        <br />System Version 3.0.1
+                        <br />System Version 1.0.0
                     </p>
 
                     {/* Social Links */}

@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Terminal, Activity } from 'lucide-react';
+import { MiniAttractor } from './MiniAttractor';
+import { useAuth } from '../../context/AuthContext';
 
 export const PillNav = () => {
+    const { isAuthenticated } = useAuth();
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
@@ -51,13 +54,16 @@ export const PillNav = () => {
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-6">
-                    <Link
-                        to="/login"
-                        className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] transition-colors border border-transparent hover:border-[var(--color-accent-gold)]/30 px-4 py-2"
-                    >
-                        <Activity size={12} />
-                        Terminal_Login
-                    </Link>
+                    {!isAuthenticated && (
+                        <Link
+                            to="/login"
+                            className="relative flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] transition-colors border border-[var(--color-border)] hover:border-[var(--color-accent-gold)]/50 px-4 py-2 overflow-hidden group"
+                        >
+                            <MiniAttractor />
+                            <Activity size={12} className="relative z-10" />
+                            <span className="relative z-10">Terminal_Login</span>
+                        </Link>
+                    )}
                 </div>
             </nav>
         </div>

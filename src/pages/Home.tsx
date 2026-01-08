@@ -12,7 +12,7 @@ import { Play, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MusicCard } from '../components/cards';
-import { CymaticsVisualizer, VisualizerToggle } from '../components/ui';
+import { CymaticsVisualizer, VisualizerToggle, KineticText } from '../components/ui';
 import { musicService, podcastService } from '../services';
 import { usePlayer } from '../context/PlayerContext';
 import { storage, BUCKETS } from '../lib/appwrite';
@@ -103,12 +103,22 @@ export function Home() {
                                 <span className="font-mono text-[10px] text-[var(--color-accent-gold)] tracking-widest uppercase">Now Featured</span>
                             </div>
 
-                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-medium text-[var(--color-text-primary)] mb-2 tracking-tighter leading-[0.9]">
-                                {featured.title}
-                            </h1>
-                            <p className="text-xl md:text-2xl font-mono text-[var(--color-text-muted)] uppercase tracking-widest mb-10">
-                                {featured.artist}
-                            </p>
+                            <KineticText
+                                text={featured.title}
+                                as="h1"
+                                type="word"
+                                className="text-5xl md:text-7xl lg:text-8xl font-display font-medium text-[var(--color-text-primary)] mb-2 tracking-tighter leading-[0.9]"
+                                delay={0}
+                                staggerDelay={40}
+                            />
+                            <KineticText
+                                text={featured.artist}
+                                as="p"
+                                type="char"
+                                className="text-xl md:text-2xl font-mono text-[var(--color-text-muted)] uppercase tracking-widest mb-10"
+                                delay={600}
+                                staggerDelay={30}
+                            />
 
                             <button
                                 onClick={() => play(featured)}
@@ -140,9 +150,11 @@ export function Home() {
                         <div className="flex items-center gap-4">
                             <span className="font-mono text-xs text-[var(--color-accent-gold)] border border-[var(--color-accent-gold)]/50 px-2 py-1">01</span>
                             <div>
-                                <h2 className="text-3xl font-display text-[var(--color-text-primary)] tracking-tight">
-                                    Detection Grid
-                                </h2>
+                                <KineticText
+                                    text="Detection Grid"
+                                    as="h2"
+                                    className="text-3xl font-display text-[var(--color-text-primary)] tracking-tight"
+                                />
                                 <p className="font-mono text-[10px] text-[var(--color-text-muted)] uppercase mt-1 tracking-widest">
                                     Latest Audio Signals
                                 </p>

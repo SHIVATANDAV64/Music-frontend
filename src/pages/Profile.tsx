@@ -7,11 +7,19 @@
 import { Heart, Clock, ListMusic, Settings, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { InputGroup } from '../components/ui/InputGroup';
+import { MagneticButton } from '../components/ui/MagneticButton';
 
 export function Profile() {
-    const { user, isAuthenticated, isLoading, logout } = useAuth();
+    const { user, isAuthenticated, isLoading, logout, updatePassword } = useAuth();
     const navigate = useNavigate();
+
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -22,6 +30,30 @@ export function Profile() {
     const handleLogout = async () => {
         await logout();
         navigate('/login');
+    };
+
+    const handlePasswordUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (newPassword !== confirmPassword) {
+            setError('New passwords do not match');
+            return;
+        }
+
+        setStatus('loading');
+        try {
+            await updatePassword(newPassword, oldPassword);
+            setStatus('success');
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setTimeout(() => setStatus('idle'), 3000);
+        } catch (err: any) {
+            console.error('Password update error:', err);
+            setError(err.message || 'Failed to update password');
+            setStatus('error');
+        }
     };
 
     if (isLoading) {
@@ -165,6 +197,69 @@ export function Profile() {
                         </div>
                     </Link>
                 )}
+            </div>
+
+            {/* Security Section */}
+            <div className="max-w-5xl mx-auto mt-12 mb-12">
+                <div className="border border-[var(--color-border)] bg-[var(--color-glass)] p-8">
+                    <div className="flex items-center gap-2 mb-8">
+                        <Shield size={18} className="text-[var(--color-accent-gold)]" />
+                        <h2 className="font-display text-sm uppercase tracking-[0.2em] font-bold">
+                            Security Protocol
+                        </h2>
+                    </div>
+
+                    {status === 'success' && (
+                        <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 text-green-500 text-xs font-mono rounded-sm">
+                            Password updated successfully.
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-mono rounded-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-2">
+                        <InputGroup
+                            id="oldPassword"
+                            label="Current Password"
+                            type="password"
+                            required
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                        />
+                        <div className="hidden md:block" />
+
+                        <InputGroup
+                            id="newPassword"
+                            label="New Password"
+                            type="password"
+                            required
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <InputGroup
+                            id="confirmNewPassword"
+                            label="Confirm New Password"
+                            type="password"
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+
+                        <div className="md:col-span-2 pt-4">
+                            <MagneticButton
+                                type="submit"
+                                disabled={status === 'loading'}
+                                className="!py-3 !px-8 text-[10px] uppercase tracking-widest font-bold !rounded-xl"
+                            >
+                                {status === 'loading' ? 'Processing...' : 'Update Credentials'}
+                            </MagneticButton>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

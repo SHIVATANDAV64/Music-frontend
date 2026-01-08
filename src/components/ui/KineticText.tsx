@@ -12,7 +12,7 @@ interface KineticTextProps {
     /** Animation type */
     type?: 'char' | 'word';
     /** HTML tag to render */
-    as?: 'h1' | 'h2' | 'h3' | 'p' | 'span';
+    as?: 'h1' | 'h2' | 'h3' | 'p' | 'span' | 'div';
     /** Additional CSS classes */
     className?: string;
     /** Delay before animation starts (ms) */
@@ -28,18 +28,16 @@ interface KineticTextProps {
 const charVariants: Variants = {
     hidden: {
         opacity: 0,
-        y: 50,
-        rotateX: -90,
-        filter: 'blur(10px)',
+        y: 20,
+        filter: 'blur(8px)',
     },
     visible: {
         opacity: 1,
         y: 0,
-        rotateX: 0,
         filter: 'blur(0px)',
         transition: {
-            duration: 0.6,
-            ease: [0.16, 1, 0.3, 1],
+            duration: 0.8,
+            ease: [0.2, 0.65, 0.3, 0.9], // Smoother, less snappy
         },
     },
 };
@@ -47,14 +45,16 @@ const charVariants: Variants = {
 const wordVariants: Variants = {
     hidden: {
         opacity: 0,
-        y: 30,
+        y: 20,
+        filter: 'blur(4px)',
     },
     visible: {
         opacity: 1,
         y: 0,
+        filter: 'blur(0px)',
         transition: {
-            duration: 0.5,
-            ease: [0.16, 1, 0.3, 1],
+            duration: 0.8,
+            ease: [0.2, 0.65, 0.3, 0.9],
         },
     },
 };
@@ -65,7 +65,7 @@ export function KineticText({
     as: Tag = 'h1',
     className = '',
     delay = 0,
-    staggerDelay = 40,
+    staggerDelay = 30, // Slightly faster stagger for smoother flow
     animate = true,
     gradient = 'none',
 }: KineticTextProps) {
@@ -85,18 +85,17 @@ export function KineticText({
 
     const getGradientClass = () => {
         switch (gradient) {
-            case 'gold': return 'text-gold-gradient';
-            case 'violet': return 'text-violet-gradient';
-            case 'mixed': return 'bg-gradient-to-r from-[var(--accent)] via-[var(--violet)] to-[var(--accent-light)] bg-clip-text text-transparent';
+            case 'gold': return 'text-[var(--color-accent-gold)]';
+            case 'violet': return 'text-violet-400';
+            case 'mixed': return 'bg-gradient-to-r from-[var(--color-accent-gold)] via-[var(--color-accent-primary)] to-[var(--color-accent-gold)] bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-x';
             default: return '';
         }
     };
 
     return (
-        <Tag className={`${className} ${getGradientClass()}`}>
+        <Tag className={`${className} ${getGradientClass()}`.trim()}>
             <motion.span
                 className="inline-flex flex-wrap"
-                style={{ perspective: '1000px' }}
                 variants={containerVariants}
                 initial="hidden"
                 animate={animate ? "visible" : "hidden"}
@@ -104,8 +103,7 @@ export function KineticText({
                 {elements.map((element, index) => (
                     <motion.span
                         key={`${element}-${index}`}
-                        className="inline-block"
-                        style={{ transformStyle: 'preserve-3d' }}
+                        className="inline-block whitespace-pre"
                         variants={type === 'char' ? charVariants : wordVariants}
                     >
                         {element === ' ' ? '\u00A0' : element}
@@ -128,8 +126,12 @@ interface SplitTextProps {
     line2: string;
     /** Optional third line */
     line3?: string;
-    /** Additional CSS classes */
+    /** Additional CSS classes for the container */
     className?: string;
+    /** Additional CSS classes for line 1 */
+    line1ClassName?: string;
+    /** Additional CSS classes for line 2 */
+    line2ClassName?: string;
     /** Whether to trigger animation */
     animate?: boolean;
 }
@@ -139,30 +141,31 @@ export function SplitText({
     line2,
     line3,
     className = '',
+    line1ClassName = '',
+    line2ClassName = '',
     animate = true
 }: SplitTextProps) {
     return (
         <div className={className}>
-            {/* Line 1 - Elegant serif */}
+            {/* Line 1 - Elegant Heading */}
             <KineticText
                 text={line1}
                 type="char"
-                as="span"
-                className="block text-5xl lg:text-7xl font-bold font-[var(--font-display)]"
+                as="div"
+                className={`text-6xl md:text-8xl lg:text-9xl font-heading font-medium tracking-tighter leading-[0.85] text-[var(--color-text-primary)] mix-blend-difference ${line1ClassName}`.trim()}
                 delay={0}
-                staggerDelay={30}
+                staggerDelay={40}
                 animate={animate}
             />
 
-            {/* Line 2 - Gradient accent */}
+            {/* Line 2 - Indented/Styled */}
             <KineticText
                 text={line2}
                 type="char"
-                as="span"
-                className="block text-5xl lg:text-7xl font-bold"
-                gradient="mixed"
-                delay={300}
-                staggerDelay={30}
+                as="div"
+                className={`text-6xl md:text-7xl lg:text-8xl font-heading font-light italic tracking-tight leading-[0.85] text-[var(--color-text-secondary)] ml-12 md:ml-24 ${line2ClassName}`.trim()}
+                delay={400} // Start after line 1 partially completes
+                staggerDelay={40}
                 animate={animate}
             />
 
@@ -171,10 +174,10 @@ export function SplitText({
                 <KineticText
                     text={line3}
                     type="word"
-                    as="span"
-                    className="block text-5xl lg:text-7xl font-bold"
-                    delay={600}
-                    staggerDelay={100}
+                    as="div"
+                    className="text-lg md:text-xl font-mono uppercase tracking-widest text-[var(--color-accent-gold)] mt-6 ml-2"
+                    delay={1200}
+                    staggerDelay={20}
                     animate={animate}
                 />
             )}

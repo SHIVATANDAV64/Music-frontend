@@ -248,7 +248,15 @@ export function Playlists() {
                                 ) : (
                                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
                                         {playlistTracks.map((track) => (
-                                            <MusicCard key={track.$id} track={track} />
+                                            <MusicCard
+                                                key={track.$id}
+                                                track={track}
+                                                onPlaylistUpdate={(playlistId, trackId, action) => {
+                                                    if (playlistId === selectedPlaylist?.$id && action === 'remove') {
+                                                        setPlaylistTracks(prev => prev.filter(t => t.$id !== trackId));
+                                                    }
+                                                }}
+                                            />
                                         ))}
                                     </div>
                                 )}

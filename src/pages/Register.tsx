@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../components/layout/AuthLayout';
 import { InputGroup } from '../components/ui/InputGroup';
 import { MagneticButton } from '../components/ui/MagneticButton';
+import { SplitText } from '../components/ui';
 
 export const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -18,12 +20,16 @@ export const Register = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+
         setLoading(true);
 
         try {
             await register(email, password, name);
-            navigate('/home');
+            navigate('/verify-email');
         } catch (err: any) {
             console.error('Registration error:', err);
             setError(err.message || 'Failed to create account');
@@ -34,17 +40,22 @@ export const Register = () => {
 
     const visualContent = (
         <>
-            <h2 className="text-hero text-6xl font-bold mb-6">Join The<br />Collective.</h2>
+            <SplitText
+                line1="Join The"
+                line2="Equation."
+                className="mb-6"
+            />
             <p className="text-lg text-white/60 font-light leading-relaxed">
-                Create your profile and start curating your personal soundscape today.
+                Add your unique variable to the infinite composition.
+                Your soundscape begins here.
             </p>
         </>
     );
 
     return (
         <AuthLayout
-            title="Create Account"
-            subtitle="Begin your sonic journey."
+            title="Create Profile"
+            subtitle="Define your presence in the sonic matrix."
             visualContent={visualContent}
         >
             {error && (
@@ -68,6 +79,7 @@ export const Register = () => {
                     label="Email Address"
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
@@ -77,8 +89,19 @@ export const Register = () => {
                     label="Password"
                     type="password"
                     required
+                    autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                />
+
+                <InputGroup
+                    id="confirmPassword"
+                    label="Confirm Password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                 />
 
                 <div className="pt-6">

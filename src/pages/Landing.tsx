@@ -4,6 +4,7 @@ import { PillNav } from '../components/ui/PillNav';
 import { GrainOverlay } from '../components/ui/GrainOverlay';
 import { MathPeacock } from '../components/ui/MathPeacock';
 import { Footer } from '../components/layout/Footer';
+import { KineticText, SplitText } from '../components/ui';
 
 export const Landing = () => {
     return (
@@ -24,29 +25,31 @@ export const Landing = () => {
                             <span className="text-micro">INITIATING SEQUENCE</span>
                         </div>
 
-                        <h1 className="text-hero text-7xl md:text-9xl leading-[0.85] mb-12 text-white mix-blend-difference select-none">
-                            AUDIO<br />
-                            ARCHITECTURE
-                        </h1>
+                        <div className="mb-12 select-none">
+                            <SplitText
+                                line1="SHIVA"
+                                line2="TANDAV"
+                            />
+                        </div>
 
                         <div className="flex flex-col md:flex-row gap-12 items-start border-t border-white/10 pt-10 w-full">
                             <p className="text-lg md:text-xl font-light text-text-secondary max-w-md leading-relaxed font-body">
-                                The bridge between global discovery and personal curation.
-                                Experience a high-fidelity interface designed for audiophiles.
+                                Witness sound as nature intended — patterns born from frequencies,
+                                the same mathematics that bloom in flowers and spiral in galaxies.
                             </p>
 
                             <div className="flex flex-col gap-4">
                                 <Link to="/login" className="group flex items-center gap-4">
                                     <div className="h-12 w-12 border border-white flex items-center justify-center group-hover:bg-white group-hover:text-black transition-colors">
-                                        <span className="material-symbols-outlined text-xl">→</span>
+                                        <span className="text-xl">→</span>
                                     </div>
-                                    <span className="font-mono text-sm tracking-widest group-hover:translate-x-2 transition-transform">ENTER TERMINAL</span>
+                                    <span className="font-mono text-sm tracking-widest group-hover:translate-x-2 transition-transform">ENTER EXPERIENCE</span>
                                 </Link>
                                 <Link to="/register" className="group flex items-center gap-4 opacity-50 hover:opacity-100 transition-opacity">
                                     <div className="h-12 w-12 border border-white/20 flex items-center justify-center">
                                         <span className="text-xl">+</span>
                                     </div>
-                                    <span className="font-mono text-sm tracking-widest">REQUEST ACCESS</span>
+                                    <span className="font-mono text-sm tracking-widest">BEGIN CURATION</span>
                                 </Link>
                             </div>
                         </div>
@@ -60,31 +63,31 @@ export const Landing = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {/* Card 1 */}
                             <div className="group border-l border-white/10 pl-8 py-4 hover:border-white transition-colors duration-500">
-                                <span className="text-micro block mb-2">01 — API STREAM</span>
-                                <h3 className="text-2xl text-white font-heading font-medium mb-4">Jamendo Protocol</h3>
+                                <span className="text-micro block mb-2">01 — DISCOVERY</span>
+                                <KineticText text="Jamendo Stream" as="h3" className="text-2xl text-white font-heading font-medium mb-4" />
                                 <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
-                                    Direct catalog injection from Jamendo.
-                                    Access 600k+ royalty-free tracks with zero latency.
+                                    Tap into a boundless creative commons — 600,000+ tracks
+                                    flowing directly into your experience, uncompressed.
                                 </p>
                             </div>
 
                             {/* Card 2 */}
                             <div className="group border-l border-white/10 pl-8 py-4 hover:border-white transition-colors duration-500">
-                                <span className="text-micro block mb-2">02 — PRIVATE CLOUD</span>
-                                <h3 className="text-2xl text-white font-heading font-medium mb-4">Appwrite Storage</h3>
+                                <span className="text-micro block mb-2">02 — PRESERVATION</span>
+                                <KineticText text="Appwrite Vault" as="h3" className="text-2xl text-white font-heading font-medium mb-4" />
                                 <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
-                                    Secure, encrypted bucket storage for personal uploads.
-                                    Your FLAC library, available everywhere.
+                                    Your personal archive, encrypted and lossless.
+                                    Upload, organize, and access your FLAC library from anywhere.
                                 </p>
                             </div>
 
                             {/* Card 3 */}
                             <div className="group border-l border-white/10 pl-8 py-4 hover:border-white transition-colors duration-500">
-                                <span className="text-micro block mb-2">03 — DSP ENGINE</span>
-                                <h3 className="text-2xl text-white font-heading font-medium mb-4">Frequency Analysis</h3>
+                                <span className="text-micro block mb-2">03 — VISUALIZATION</span>
+                                <KineticText text="Cymatic Rendering" as="h3" className="text-2xl text-white font-heading font-medium mb-4" />
                                 <p className="text-sm text-text-secondary leading-relaxed max-w-xs">
-                                    Real-time FFT processing allows the interface to react
-                                    visually to the audio spectrum.
+                                    Real-time frequency analysis transforms sound into geometry.
+                                    Witness the mathematics hidden within every melody.
                                 </p>
                             </div>
                         </div>

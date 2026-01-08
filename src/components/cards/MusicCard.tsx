@@ -5,7 +5,7 @@
  * Everything else supports it, not competes with it.
  * No overlays cluttering the art - it needs to breathe.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Pause, Heart, Plus, ListPlus } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { getTrackCoverUrl } from '../../utils/trackUtils';
@@ -16,15 +16,25 @@ import type { Track } from '../../types';
 
 interface MusicCardProps {
     track: Track;
+    onUnfavorite?: (trackId: string) => void;
+    onPlaylistUpdate?: (playlistId: string, trackId: string, action: 'add' | 'remove') => void;
 }
 
-export function MusicCard({ track }: MusicCardProps) {
+export function MusicCard({ track, onUnfavorite, onPlaylistUpdate }: MusicCardProps) {
     const { currentTrack, isPlaying, play, pause, resume, addToQueue } = usePlayer();
     const { user } = useAuth();
     const [isHovered, setIsHovered] = useState(false);
+    const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isAddingFavorite, setIsAddingFavorite] = useState(false);
-    const [showPlaylistSelector, setShowPlaylistSelector] = useState(false);
+
+    useEffect(() => {
+        if (user?.$id) {
+            favoritesService.isFavorite(user.$id, track.$id)
+                .then(setIsFavorite)
+                .catch(err => console.error('[MusicCard] check favorite fail:', err));
+        }
+    }, [user?.$id, track.$id, user]);
 
     const isCurrentTrack = currentTrack?.$id === track.$id;
     const isPlayingThis = isCurrentTrack && isPlaying;
@@ -50,6 +60,9 @@ export function MusicCard({ track }: MusicCardProps) {
             // Use toggleFavorite with correct signature: (Track)
             const newState = await favoritesService.toggleFavorite(track);
             setIsFavorite(newState);
+            if (!newState && onUnfavorite) {
+                onUnfavorite(track.$id);
+            }
         } catch (err) {
             console.error('Failed to toggle favorite:', err);
         } finally {
@@ -138,6 +151,7 @@ export function MusicCard({ track }: MusicCardProps) {
                     isOpen={showPlaylistSelector}
                     onClose={() => setShowPlaylistSelector(false)}
                     track={track}
+                    onUpdate={onPlaylistUpdate}
                 />
 
                 {/* Mobile/Compact indicator for currently playing */}

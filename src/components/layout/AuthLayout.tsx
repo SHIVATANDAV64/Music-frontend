@@ -2,6 +2,7 @@
 import { PillNav } from '../ui/PillNav';
 import { GrainOverlay } from '../ui/GrainOverlay';
 import { CliffordAttractor } from '../ui/CliffordAttractor';
+import { KineticText, SplitText } from '../ui';
 
 interface AuthLayoutProps {
     children: React.ReactNode;
@@ -25,19 +26,22 @@ export const AuthLayout = ({ children, title, subtitle, visualContent }: AuthLay
                             <CliffordAttractor />
                         </div>
                         <div className="relative z-10">
-                            <h4 className="text-micro mb-8">PROJECT: AUDIO_OS</h4>
-                            <div className="max-w-md">
+                            <h4 className="text-micro mb-8">SYSTEM: SHIVATANDAV</h4>
+                            <div className="max-w-lg">
                                 {visualContent ? visualContent : (
-                                    <>
-                                        <h1 className="text-6xl font-heading font-bold text-white mb-6 tracking-tighter">
-                                            Access<br />Terminal.
-                                        </h1>
-                                        <p className="text-text-secondary text-lg">
-                                            Manage your library and sync your preferences.
-                                            Authorized personnel only.
-                                        </p>
-                                    </>
+                                    <div className="mb-6">
+                                        <SplitText
+                                            line1="Resume"
+                                            line2="Harmony."
+                                            line2ClassName="text-5xl md:text-6xl lg:text-7xl whitespace-nowrap"
+                                            className="mb-6"
+                                        />
+                                    </div>
                                 )}
+                                <p className="text-text-secondary text-lg max-w-md">
+                                    Realign with your curated soundscape.
+                                    Your library awaits.
+                                </p>
                             </div>
                         </div>
 
@@ -56,7 +60,7 @@ export const AuthLayout = ({ children, title, subtitle, visualContent }: AuthLay
                             </div>
                             <div>
                                 <span className="block text-white mb-1">VERSION</span>
-                                3.0.1
+                                1.0.0
                             </div>
                         </div>
                     </div>
@@ -65,7 +69,12 @@ export const AuthLayout = ({ children, title, subtitle, visualContent }: AuthLay
                     <div className="flex w-full flex-col justify-center bg-card px-4 lg:w-1/2 lg:px-24">
                         <div className="w-full max-w-md mx-auto">
                             <div className="mb-8">
-                                <h2 className="text-2xl font-heading font-bold text-white mb-2">{title}</h2>
+                                <KineticText
+                                    text={title}
+                                    as="h2"
+                                    type="word"
+                                    className="text-2xl font-heading font-bold text-white mb-2"
+                                />
                                 <p className="text-text-secondary">{subtitle}</p>
                             </div>
 

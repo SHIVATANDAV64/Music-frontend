@@ -19,6 +19,9 @@ export interface User extends AppwriteDocument {
     email?: string;
     avatar_url?: string;
     is_admin: boolean;
+    is_verified: boolean;
+    last_verification_sent_at?: string;
+    last_password_reset_at?: string;
 }
 
 // Music track - supports both Jamendo (external) and Appwrite (uploaded) sources
